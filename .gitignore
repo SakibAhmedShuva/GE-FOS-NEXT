@@ -54,3 +54,5 @@ data_storage
 test
 *copy*
 *.xlsx
+*.zip
+*.rar
