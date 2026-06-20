@@ -83,3 +83,48 @@ Result:
 - `pnpm install --frozen-lockfile` passed.
 - `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
 - A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 16 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
+
+## Stage 17 check
+
+Stage 17 removed deliberate PDF item truncation and added golden document comparison tooling.
+
+Commands run:
+
+```bash
+npx --yes pnpm@10.15.1 install --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes tsc --noEmit --pretty false
+```
+
+Result:
+
+- `pnpm install --frozen-lockfile` passed.
+- `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
+- A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 17 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
+
+## Stage 18 delivery packaging check
+
+Stage 18 added clean delivery packaging and verification scripts.
+
+Commands run in this sandbox:
+
+```bash
+node scripts/package-clean-delivery.mjs /mnt/data/ge_fos_next_clean_delivery_test.zip
+node scripts/verify-delivery-zip.mjs /mnt/data/ge_fos_next_clean_delivery_test.zip
+node scripts/production-readiness-check.mjs
+```
+
+Result:
+
+- Clean delivery ZIP verification passed with 0 forbidden entries.
+- `.env.example` remained included.
+- `.git`, `node_modules`, `.next`, `storage`, old `data_storage`, old `authorization`, and old `assets` were excluded from the generated test delivery ZIP.
+- Local readiness structure check passed.
+
+This still does not replace the required VPS/dev machine build proof:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm prisma generate
+pnpm build
+```
