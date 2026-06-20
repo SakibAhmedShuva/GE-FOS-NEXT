@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-06-20T06:12:42.704Z",
+  "writeMode": false,
+  "legacyPasswordMode": "force-reset",
+  "summary": {
+    "users": 12,
+    "clients": 37,
+    "projects": 79,
+    "projectItems": 482,
+    "offerSettings": 67,
+    "shares": 9,
+    "reviewRequests": 0,
+    "notifications": 20,
+    "chatMessages": 43,
+    "covers": 14,
+    "generatedExportsMatched": 49,
+    "generatedExportsUnmatched": 65,
+    "activityRows": 940,
+    "migrationErrors": 0
+  },
+  "warningCount": 65,
+  "errorCount": 0,
+  "sampleWarnings": [
+    {
+      "source": "data_storage/FOS/FO_FDS_FPS_SA_251207GE86.pdf",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FDS_FPS_SA_251207GE86.xlsx",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_DFHC_250907GE62.pdf",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_DFHC_250907GE94.pdf",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_DFHC_250907GE94.xlsx",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_ND_250707GE48.xlsx",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_ND_250707GE65.pdf",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_ND_250707GE67.pdf",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_ND_250707GE67.xlsx",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    },
+    {
+      "source": "data_storage/FOS/FO_FPS_ND_250707GE97.xlsx",
+      "severity": "WARNING",
+      "message": "Generated FOS file could not be matched to a project reference"
+    }
+  ]
+}
