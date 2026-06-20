@@ -4,16 +4,26 @@ import { randomUUID } from "node:crypto";
 
 const DEFAULT_STORAGE_ROOT = "./storage";
 
+export class InvalidStoragePathError extends Error {
+  constructor(message = "Invalid storage path") {
+    super(message);
+    this.name = "InvalidStoragePathError";
+  }
+}
+
 export function getStorageRoot() {
   return process.env.FOS_STORAGE_ROOT || DEFAULT_STORAGE_ROOT;
 }
 
 export function resolveStoragePath(storageKey: string) {
   const root = path.resolve(getStorageRoot());
-  const normalizedKey = storageKey.replace(/\\/g, "/").replace(/^\/+/, "");
+  const normalizedKey = String(storageKey || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!normalizedKey || normalizedKey.includes("\0")) {
+    throw new InvalidStoragePathError();
+  }
   const fullPath = path.resolve(root, normalizedKey);
   if (fullPath !== root && !fullPath.startsWith(`${root}${path.sep}`)) {
-    throw new Error("Invalid storage path");
+    throw new InvalidStoragePathError();
   }
   return fullPath;
 }

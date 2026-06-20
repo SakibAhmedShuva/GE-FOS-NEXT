@@ -65,3 +65,21 @@ Only mark build/deployment safety complete after all three pass.
 - TypeScript target raised to `es2017`.
 - Strict TypeScript issues fixed through Stage 15.
 - Export and chat attachment downloads hardened to keep resolved files inside `FOS_STORAGE_ROOT`.
+
+## Stage 16 check
+
+Stage 16 explicitly re-included the export and chat attachment download routes and added 403/404-safe path handling.
+
+Commands run:
+
+```bash
+npx --yes pnpm@10.15.1 install --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes tsc --noEmit --pretty false
+```
+
+Result:
+
+- `pnpm install --frozen-lockfile` passed.
+- `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
+- A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 16 code changes, then removed before packaging. This is not a replacement for real Prisma generation.

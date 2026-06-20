@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db/prisma";
 import type { SessionUser } from "@/lib/auth/session";
 import { saveOfferProject, serializeOfferProject } from "@/lib/services/offer-project.service";
+import { canEditProject } from "@/lib/permissions/rbac";
 
 const HEADER_KEYWORDS = ["description", "item", "qty", "quantity", "unit", "price", "rate", "amount"];
 const FOOTER_KEYWORDS = ["total", "grand total", "signature", "prepared", "authorized", "sub total", "subtotal"];
@@ -77,8 +78,64 @@ export async function processAiHelperWorkbook(file: File, source: string) {
 }
 
 export async function saveAiHelperProject(user: SessionUser, payload: Record<string, unknown>) {
-  const project = await prisma.project.create({ data: { referenceNumber: String(payload.referenceNumber || `AI-${Date.now()}`), projectType: "AI_HELPER", ownerUserId: user.id, legacyJson: payload as never, metadata: { aiHelper: payload } as never, lastModifiedAt: new Date() } });
-  await prisma.activityLog.create({ data: { actorUserId: user.id, actorNameSnapshot: user.name, action: "ai_helper_project_saved", entityType: "project", entityId: project.id, projectId: project.id, referenceNumber: project.referenceNumber } });
+  const projectId = typeof payload.projectId === "string" ? payload.projectId : "";
+  const referenceNumber = String(payload.referenceNumber || `AI-${Date.now()}`);
+
+  if (projectId) {
+    const existing = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { shares: { select: { sharedWithUserId: true, permission: true } } },
+    });
+    if (!existing || existing.deletedAt || existing.projectType !== "AI_HELPER") {
+      throw new Error("AI helper project not found");
+    }
+    if (!canEditProject(user, existing)) {
+      throw new Error("AI helper edit access denied");
+    }
+    const project = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        referenceNumber,
+        legacyJson: payload as never,
+        metadata: { aiHelper: payload } as never,
+        lastModifiedAt: new Date(),
+      },
+    });
+    await prisma.activityLog.create({
+      data: {
+        actorUserId: user.id,
+        actorNameSnapshot: user.name,
+        action: "ai_helper_project_updated",
+        entityType: "project",
+        entityId: project.id,
+        projectId: project.id,
+        referenceNumber: project.referenceNumber,
+      },
+    });
+    return project;
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      referenceNumber,
+      projectType: "AI_HELPER",
+      ownerUserId: user.id,
+      legacyJson: payload as never,
+      metadata: { aiHelper: payload } as never,
+      lastModifiedAt: new Date(),
+    },
+  });
+  await prisma.activityLog.create({
+    data: {
+      actorUserId: user.id,
+      actorNameSnapshot: user.name,
+      action: "ai_helper_project_saved",
+      entityType: "project",
+      entityId: project.id,
+      projectId: project.id,
+      referenceNumber: project.referenceNumber,
+    },
+  });
   return project;
 }
 
