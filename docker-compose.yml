@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: financial_offer_system
+      POSTGRES_USER: fos_user
+      POSTGRES_PASSWORD: fos_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - fos_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  fos_postgres_data:
