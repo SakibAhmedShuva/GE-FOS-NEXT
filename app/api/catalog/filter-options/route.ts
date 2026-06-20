@@ -18,9 +18,9 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
-    productTypes: uniqueSorted(productTypes.map((row) => row.productType)),
-    makes: uniqueSorted(makes.map((row) => row.make)),
-    approvals: uniqueSorted(approvals.map((row) => row.approvals)),
-    models: uniqueSorted(models.map((row) => row.model)),
+    productTypes: uniqueSorted(productTypes.map((row: { productType: string | null }) => row.productType)),
+    makes: uniqueSorted(makes.map((row: { make: string | null }) => row.make)),
+    approvals: uniqueSorted(approvals.map((row: { approvals: string | null }) => row.approvals)),
+    models: uniqueSorted(models.map((row: { model: string | null }) => row.model)),
   });
 }

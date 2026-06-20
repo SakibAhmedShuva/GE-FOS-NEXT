@@ -12,5 +12,5 @@ export async function GET() {
     orderBy: { productType: "asc" },
   });
 
-  return NextResponse.json({ sheetNames: rows.map((row) => row.productType).filter(Boolean) });
+  return NextResponse.json({ sheetNames: rows.map((row: { productType: string | null }) => row.productType).filter(Boolean) });
 }

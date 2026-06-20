@@ -1,56 +1,50 @@
-# Build proof status
+# Build / Deployment Safety Proof
 
-This stage adds the build-safety structure that was missing:
+## Route group note
 
-- protected `(app)` layout using the server session
-- user-aware sidebar/topbar
-- admin-only sidebar section
-- initial Prisma migration folder
-- Prisma migration lock file
-- Node/Next API remains the backend; Flask is not copied into this clean project
+`app/(app)` is correct Next.js App Router syntax. It is a route group used to organize protected app pages without changing URLs. Example: `app/(app)/dashboard/page.tsx` becomes `/dashboard`.
 
-## Commands attempted in this sandbox
+## Commands run in this sandbox
 
 ```bash
-cd /mnt/data/fos_next_full_clean
-pnpm --version
+npx --yes pnpm@10.15.1 import
+npx --yes pnpm@10.15.1 install --ignore-scripts --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes pnpm@10.15.1 build
+npx --yes tsc --noEmit --pretty false
 ```
 
-Result:
+## Result
+
+- `pnpm-lock.yaml` was generated.
+- `pnpm install --frozen-lockfile` completed.
+- The app now avoids remote Google font downloads, so builds do not fail on `fonts.googleapis.com`.
+- `tsc --noEmit` passed after Stage 12 updates.
+- Next production build compiled the app, then could not honestly complete full data/build proof because Prisma Client generation is blocked by Prisma binary CDN DNS in this sandbox.
+
+## Blocker in this sandbox
+
+`prisma generate` could not finish because this sandbox could not resolve Prisma binary CDN DNS:
 
 ```text
-bash: pnpm: command not found
+getaddrinfo EAI_AGAIN binaries.prisma.sh
 ```
 
-Then:
+Because Prisma Client generation failed, a true production `pnpm build` cannot be honestly marked passed inside this sandbox. After Prisma binary access works on the dev machine/VPS, run:
 
 ```bash
-corepack prepare pnpm@10.15.1 --activate
-```
-
-Result:
-
-```text
-Error when performing the request to https://registry.npmjs.org/pnpm/-/pnpm-10.15.1.tgz
-getaddrinfo EAI_AGAIN registry.npmjs.org
-```
-
-Then an npm lock-only attempt was tried, but the sandbox package registry request timed out.
-
-## What this means
-
-A real `pnpm-lock.yaml`, `pnpm install`, `pnpm prisma generate`, and `pnpm build` could not be completed inside this sandbox because package-manager download/registry access is unavailable.
-
-I am not claiming a successful build proof until those commands run on a machine with registry access.
-
-## Required command sequence on the dev/VPS machine
-
-```bash
-corepack enable
-corepack prepare pnpm@10.15.1 --activate
-pnpm install
+pnpm install --frozen-lockfile
 pnpm prisma generate
 pnpm build
 ```
 
-After that, commit the generated `pnpm-lock.yaml` and any build fixes.
+## Fixes added during build pass
+
+- Added `pnpm-lock.yaml`.
+- Added protected app layout earlier.
+- Added admin/user-aware sidebar earlier.
+- Removed `next/font/google` dependency so offline/VPS builds do not call Google Fonts.
+- Raised TypeScript target to `es2017` to avoid `Set` iteration build errors.
+- Fixed strict TypeScript issues found during build checks.
+
+Do not claim launch-ready until the above three production commands pass on a machine that can reach Prisma binary CDN or has Prisma engines cached.

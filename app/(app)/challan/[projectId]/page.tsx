@@ -1,13 +1,13 @@
 import { notFound, redirect } from "next/navigation";
-import ProjectRoutePlaceholder from "@/components/projects/project-route-placeholder";
+import ChallanBuilderClient from "@/components/challan/challan-builder-client";
 import { getSessionUser } from "@/lib/auth/session";
-import { getProjectSummaryForUser } from "@/lib/services/project-read.service";
+import { getChallanProjectForUser, serializeChallanProject } from "@/lib/services/challan-project.service";
 
-export default async function ChallanProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function EditChallanPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   const { projectId } = await params;
-  const project = await getProjectSummaryForUser(projectId, user);
-  if (!project || project.projectType !== "CHALLAN") notFound();
-  return <ProjectRoutePlaceholder project={project} moduleName="Challan Builder" />;
+  const project = await getChallanProjectForUser(projectId, user);
+  if (!project) notFound();
+  return <ChallanBuilderClient initialProject={serializeChallanProject(project) as any} />;
 }

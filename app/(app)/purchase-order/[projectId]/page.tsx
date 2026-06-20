@@ -1,13 +1,14 @@
 import { notFound, redirect } from "next/navigation";
-import ProjectRoutePlaceholder from "@/components/projects/project-route-placeholder";
+import PurchaseOrderBuilderClient from "@/components/purchase-order/purchase-order-builder-client";
 import { getSessionUser } from "@/lib/auth/session";
-import { getProjectSummaryForUser } from "@/lib/services/project-read.service";
+import { getPurchaseOrderForAdmin, serializePurchaseOrder } from "@/lib/services/purchase-order-project.service";
 
 export default async function PurchaseOrderProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (user.role !== "ADMIN") redirect("/dashboard");
   const { projectId } = await params;
-  const project = await getProjectSummaryForUser(projectId, user);
-  if (!project || project.projectType !== "PURCHASE_ORDER") notFound();
-  return <ProjectRoutePlaceholder project={project} moduleName="Purchase Order Builder" />;
+  const project = await getPurchaseOrderForAdmin(projectId, user);
+  if (!project) notFound();
+  return <PurchaseOrderBuilderClient initialProject={serializePurchaseOrder(project)} />;
 }

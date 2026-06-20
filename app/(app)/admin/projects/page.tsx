@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import PurchaseOrderBuilderClient from "@/components/purchase-order/purchase-order-builder-client";
+import ProjectListClient from "@/components/projects/project-list-client";
 import { getSessionUser } from "@/lib/auth/session";
 
-export default async function NewPurchaseOrderPage() {
+export default async function AdminProjectsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.role !== "ADMIN") redirect("/dashboard");
-  return <PurchaseOrderBuilderClient />;
+  return <ProjectListClient scope="admin" />;
 }

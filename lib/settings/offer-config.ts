@@ -23,7 +23,7 @@ export async function getOfferConfig(): Promise<OfferConfig> {
     where: { key: { in: ["offer.bdt_conversion_rate", "offer.customs_duty_percentage"] } },
   });
 
-  const byKey = new Map(settings.map((setting) => [setting.key, setting.value]));
+  const byKey = new Map(settings.map((setting: { key: string; value: unknown }) => [setting.key, setting.value]));
   return {
     bdt_conversion_rate: numberSetting(byKey.get("offer.bdt_conversion_rate"), DEFAULT_OFFER_CONFIG.bdt_conversion_rate),
     customs_duty_percentage: numberSetting(byKey.get("offer.customs_duty_percentage"), DEFAULT_OFFER_CONFIG.customs_duty_percentage),

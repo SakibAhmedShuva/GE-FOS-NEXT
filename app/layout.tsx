@@ -1,9 +1,5 @@
 import "./css/style.css";
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const plusJakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-plus-jakarta", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Financial Offer System",
@@ -14,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${plusJakarta.variable} bg-slate-100 font-inter text-slate-950 antialiased`}>
+      <body className="bg-slate-100 font-inter text-slate-950 antialiased">
         {children}
       </body>
     </html>

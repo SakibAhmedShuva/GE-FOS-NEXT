@@ -5,9 +5,9 @@
 }
 
 @theme {
-  --font-inter: Inter, sans-serif;
-  --font-plus-jakarta: "Plus Jakarta Sans", sans-serif;
-  --font-mono: "Roboto Mono", monospace;
+  --font-inter: Arial, Helvetica, sans-serif;
+  --font-plus-jakarta: Arial, Helvetica, sans-serif;
+  --font-mono: "Courier New", monospace;
 }
 
 @layer base {
