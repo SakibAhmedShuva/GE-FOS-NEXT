@@ -14,7 +14,9 @@
     "migration:import:write": "node scripts/migrate-current-system/import-legacy-system.mjs --write",
     "migration:catalog:dry-run": "node scripts/migrate-current-system/import-catalog-workbooks.mjs",
     "migration:catalog:write": "node scripts/migrate-current-system/import-catalog-workbooks.mjs --write",
-    "migration:verify-final": "node scripts/migrate-current-system/verify-final-migration.mjs"
+    "migration:verify-final": "node scripts/migrate-current-system/verify-final-migration.mjs",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
