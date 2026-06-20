@@ -1,0 +1,464 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ProjectType {
+  OFFER
+  CHALLAN
+  PURCHASE_ORDER
+  AI_HELPER
+}
+
+enum ProjectStatus {
+  PENDING
+  DELIVERED
+  ARCHIVED
+}
+
+enum SourceType {
+  FOREIGN
+  LOCAL
+  CUSTOM
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+enum ReviewStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReviewVisibility {
+  USER
+  ADMIN
+}
+
+enum NotificationType {
+  REVIEW
+  PROJECT_SHARE
+  ADMIN_MESSAGE
+  EXPORT
+  CHAT
+  SYSTEM
+}
+
+enum ExportType {
+  PDF
+  XLSX
+}
+
+enum DocumentType {
+  OFFER
+  PURCHASE_ORDER
+  CHALLAN
+}
+
+enum MigrationSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+model User {
+  id              String          @id @default(cuid())
+  legacySerial    String?
+  name            String
+  email           String          @unique
+  passwordHash    String
+  role            UserRole        @default(USER)
+  isActive        Boolean         @default(true)
+  passwordResetRequired Boolean   @default(true)
+  legacyPasswordImportedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  ownedProjects   Project[]       @relation("ProjectOwner")
+  preparedChallans ChallanLog[]   @relation("ChallanPreparedBy")
+  uploadedCovers  Cover[]
+  generatedExports Export[]
+  reviewRequests  ReviewRequest[] @relation("ReviewRequester")
+  processedReviews ReviewRequest[] @relation("ReviewProcessor")
+  notifications   Notification[]
+  sentMessages    ChatMessage[]   @relation("ChatSender")
+  receivedMessages ChatMessage[]  @relation("ChatRecipient")
+  chatAttachments ChatAttachment[]
+  activityLogs    ActivityLog[]
+  catalogImports  PriceListImport[]
+  projectSharesOwned ProjectShare[] @relation("ProjectShareOwner")
+  projectSharesReceived ProjectShare[] @relation("ProjectShareRecipient")
+  presence        UserPresence?
+}
+
+model Client {
+  id            String   @id @default(cuid())
+  legacySerial  String?
+  clientName    String
+  clientAddress String?
+  searchText    String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([clientName])
+}
+
+model CatalogItem {
+  id                  String      @id @default(cuid())
+  sourceType          SourceType
+  productType         String?
+  itemCode            String?
+  make                String?
+  approvals           String?
+  model               String?
+  descriptionHtml     String
+  descriptionPlain    String
+  poPrice             Decimal?    @db.Decimal(18, 4)
+  offerPrice          Decimal?    @db.Decimal(18, 4)
+  installationPrice   Decimal?    @db.Decimal(18, 4)
+  unit                String?
+  metadata            Json?
+  searchText          String      @default("")
+  embedding           Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  importId            String?
+  import              PriceListImport? @relation(fields: [importId], references: [id])
+
+  projectItems        ProjectItem[]
+
+  @@index([sourceType])
+  @@index([productType])
+  @@index([itemCode])
+  @@index([make])
+  @@index([model])
+}
+
+model PriceListImport {
+  id             String                  @id @default(cuid())
+  sourceType     SourceType
+  filename       String
+  uploadedById   String?
+  uploadedBy     User?                   @relation(fields: [uploadedById], references: [id])
+  status         String                  @default("PENDING")
+  rowCount       Int                     @default(0)
+  errorCount     Int                     @default(0)
+  createdAt      DateTime                @default(now())
+
+  items          CatalogItem[]
+  errors         PriceListImportError[]
+}
+
+model PriceListImportError {
+  id          String          @id @default(cuid())
+  importId    String
+  import      PriceListImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  rowNumber   Int?
+  sheetName   String?
+  message     String
+  rawData     Json?
+  createdAt   DateTime        @default(now())
+}
+
+model Project {
+  id               String          @id @default(cuid())
+  legacyProjectId  String?         @unique
+  referenceNumber  String
+  projectType      ProjectType
+  status           ProjectStatus   @default(PENDING)
+  ownerUserId      String
+  owner            User            @relation("ProjectOwner", fields: [ownerUserId], references: [id])
+  parentProjectId  String?
+  parentProject    Project?        @relation("ProjectParent", fields: [parentProjectId], references: [id])
+  childProjects    Project[]       @relation("ProjectParent")
+  clientSnapshot   Json?
+  legacyJson       Json?
+  metadata         Json?
+  lastModifiedAt   DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  deletedAt        DateTime?
+
+  items            ProjectItem[]
+  offerSetting     OfferSetting?
+  shares           ProjectShare[]
+  reviewRequests   ReviewRequest[]
+  exports          Export[]
+  activityLogs     ActivityLog[]
+  challanLogs      ChallanLog[]
+
+  @@index([referenceNumber])
+  @@index([projectType])
+  @@index([status])
+  @@index([ownerUserId])
+}
+
+model ProjectItem {
+  id                  String       @id @default(cuid())
+  projectId           String
+  project             Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sortOrder           Int          @default(0)
+  sourceType          SourceType
+  catalogItemId       String?
+  catalogItem         CatalogItem? @relation(fields: [catalogItemId], references: [id])
+  itemCode            String?
+  productType         String?
+  make                String?
+  model               String?
+  approvals           String?
+  descriptionHtml     String?
+  descriptionPlain    String?
+  qty                 Decimal?     @db.Decimal(18, 4)
+  unit                String?
+  foreignPriceUsd     Decimal?     @db.Decimal(18, 4)
+  foreignTotalUsd     Decimal?     @db.Decimal(18, 4)
+  localSupplyPriceBdt Decimal?     @db.Decimal(18, 4)
+  localSupplyTotalBdt Decimal?     @db.Decimal(18, 4)
+  installationPriceBdt Decimal?    @db.Decimal(18, 4)
+  installationTotalBdt Decimal?    @db.Decimal(18, 4)
+  poPriceUsd          Decimal?     @db.Decimal(18, 4)
+  poTotalUsd          Decimal?     @db.Decimal(18, 4)
+  poPriceBdt          Decimal?     @db.Decimal(18, 4)
+  isCustom            Boolean      @default(false)
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([catalogItemId])
+  @@index([sourceType])
+}
+
+model OfferSetting {
+  projectId                   String  @id
+  project                     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  financials                  Json?
+  financialLabels             Json?
+  visibleColumns              Json?
+  selectedCoverId             String?
+  selectedCover               Cover?  @relation(fields: [selectedCoverId], references: [id])
+  isSummaryPageEnabled        Boolean @default(false)
+  summaryScopeDescriptions    Json?
+  tncState                    Json?
+  includeSignature            Boolean @default(false)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model ProjectShare {
+  id                String          @id @default(cuid())
+  projectId         String
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ownerUserId       String
+  owner             User            @relation("ProjectShareOwner", fields: [ownerUserId], references: [id])
+  sharedWithUserId  String
+  sharedWith        User            @relation("ProjectShareRecipient", fields: [sharedWithUserId], references: [id])
+  permission        SharePermission @default(VIEW)
+  createdAt         DateTime        @default(now())
+
+  @@unique([projectId, sharedWithUserId])
+  @@index([ownerUserId])
+  @@index([sharedWithUserId])
+}
+
+model ReviewRequest {
+  id                 String           @id @default(cuid())
+  legacyRequestId    String?          @unique
+  userId             String
+  user               User             @relation("ReviewRequester", fields: [userId], references: [id])
+  projectId          String?
+  project            Project?         @relation(fields: [projectId], references: [id])
+  requestType        String
+  itemCode           String?
+  details            Json?
+  status             ReviewStatus     @default(DRAFT)
+  visibility         ReviewVisibility @default(USER)
+  remarks            String?
+  processedByUserId  String?
+  processedBy        User?            @relation("ReviewProcessor", fields: [processedByUserId], references: [id])
+  processedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  legacyId      String?          @unique
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          NotificationType @default(SYSTEM)
+  title         String?
+  messageHtml   String
+  isRead        Boolean          @default(false)
+  actionUrl     String?
+  metadata      Json?
+  createdAt     DateTime         @default(now())
+  readAt        DateTime?
+  deletedAt     DateTime?
+
+  @@index([userId, isRead])
+}
+
+model ChatMessage {
+  id              String           @id @default(cuid())
+  legacyMessageId String?          @unique
+  senderUserId    String
+  sender          User             @relation("ChatSender", fields: [senderUserId], references: [id])
+  recipientUserId String
+  recipient       User             @relation("ChatRecipient", fields: [recipientUserId], references: [id])
+  message         Json
+  createdAt       DateTime         @default(now())
+  readAt          DateTime?
+
+  attachments     ChatAttachment[]
+
+  @@index([senderUserId, recipientUserId, createdAt])
+  @@index([recipientUserId, readAt])
+}
+
+model ChatAttachment {
+  id               String       @id @default(cuid())
+  messageId         String?
+  message           ChatMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  storageKey        String
+  originalFilename  String
+  mimeType          String?
+  sizeBytes         Int?
+  uploadedByUserId  String
+  uploadedBy        User         @relation(fields: [uploadedByUserId], references: [id])
+  legacyFilename    String?
+  createdAt         DateTime     @default(now())
+
+  @@index([messageId])
+}
+
+model UserPresence {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socketId    String?
+  lastSeenAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Cover {
+  id                  String         @id @default(cuid())
+  filename            String
+  storageKey          String         @unique
+  thumbnailStorageKey String?
+  uploadedByUserId    String?
+  uploadedBy          User?          @relation(fields: [uploadedByUserId], references: [id])
+  projectReference    String?
+  createdAt           DateTime       @default(now())
+
+  offerSettings       OfferSetting[]
+
+  @@index([filename])
+  @@index([projectReference])
+}
+
+model Export {
+  id                 String       @id @default(cuid())
+  projectId           String
+  project             Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  exportType          ExportType
+  documentType        DocumentType
+  filename            String
+  storageKey          String       @unique
+  generatedByUserId   String
+  generatedBy         User         @relation(fields: [generatedByUserId], references: [id])
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+
+  @@index([projectId])
+  @@index([documentType])
+}
+
+model ChallanSequence {
+  id          String   @id @default(cuid())
+  key         String   @unique @default("default")
+  currentRef  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChallanLog {
+  id                 String   @id @default(cuid())
+  legacyRowNumber    Int?
+  ref                String
+  date               DateTime?
+  clientName         String?
+  description        String?
+  signedCopyReceived String?
+  remarks            String?
+  challanCarrier     String?
+  preparedByUserId   String?
+  preparedBy         User?    @relation("ChallanPreparedBy", fields: [preparedByUserId], references: [id])
+  projectId          String?
+  project            Project? @relation(fields: [projectId], references: [id])
+  createdAt          DateTime @default(now())
+
+  @@index([ref])
+  @@index([projectId])
+}
+
+model ActivityLog {
+  id                  String   @id @default(cuid())
+  actorUserId          String?
+  actor                User?    @relation(fields: [actorUserId], references: [id])
+  actorNameSnapshot    String?
+  action              String
+  entityType          String?
+  entityId            String?
+  projectId           String?
+  project             Project? @relation(fields: [projectId], references: [id])
+  referenceNumber     String?
+  filePathOrStorageKey String?
+  metadata            Json?
+  legacyRow           Json?
+  createdAt           DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model MigrationRun {
+  id                 String           @id @default(cuid())
+  sourceRoot          String
+  report              Json?
+  startedAt           DateTime         @default(now())
+  finishedAt          DateTime?
+  createdBy           String?
+  errors              MigrationError[]
+}
+
+model MigrationError {
+  id          String            @id @default(cuid())
+  runId       String
+  run         MigrationRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  source      String
+  severity    MigrationSeverity @default(ERROR)
+  message     String
+  rawData     Json?
+  createdAt   DateTime          @default(now())
+}
