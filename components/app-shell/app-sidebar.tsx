@@ -10,6 +10,7 @@ const primaryNav = [
   { href: "/shared", label: "Shared With Me" },
   { href: "/reviews", label: "My Reviews" },
   { href: "/notifications", label: "Notifications" },
+  { href: "/chat", label: "Chat" },
   { href: "/ai-helper", label: "AI Helper" },
 ];
 
@@ -19,6 +20,8 @@ const adminNav = [
   { href: "/admin/reviews", label: "Admin Reviews" },
   { href: "/admin/activity", label: "Activity Log" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/catalog", label: "Catalog Admin" },
+  { href: "/admin/messages", label: "Messaging" },
 ];
 
 export default function AppSidebar({ user }: { user: SessionUser }) {
