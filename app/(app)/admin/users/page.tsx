@@ -1,9 +1,4 @@
-export default function Page() {
-  return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Route locked</p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-950">User Management</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">Blocked until password-hash migration/reset policy is approved.</p>
-    </section>
-  );
-}
+import { redirect } from "next/navigation";
+import UsersAdminClient from "@/components/admin/users-admin-client";
+import { getSessionUser } from "@/lib/auth/session";
+export default async function AdminUsersPage(){const user=await getSessionUser(); if(!user) redirect('/login'); if(user.role!=='ADMIN') redirect('/dashboard'); return <UsersAdminClient/>}
