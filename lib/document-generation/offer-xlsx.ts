@@ -87,10 +87,18 @@ export async function generateOfferXlsxBuffer(model: OfferDocumentModel) {
   sheet.addRow(["Foreign Grand Total With Customs BDT", currency(model.totals.grandTotals.foreignGrandTotalBdt)]);
   sheet.addRow(["Amount in words", model.amountInWords.foreignGrandTotalBdt]);
 
-  const tnc = model.settings.tncState;
-  if (tnc && Object.keys(tnc).length) {
+  const tnc = model.settings.tncState as Record<string, unknown>;
+  const terms: string[] = [];
+  if (tnc?.international) terms.push("International supply terms apply.");
+  if (tnc?.local_supply) terms.push("Local supply terms apply.");
+  if (tnc?.local_installation) terms.push("Installation terms apply.");
+  if (typeof tnc?.value === "string" && tnc.value.trim()) {
+    terms.push(...tnc.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  }
+  if (terms.length) {
     sheet.addRow([]);
-    sheet.addRow(["T&C State", JSON.stringify(tnc)]);
+    sheet.addRow(["Terms & Conditions"]);
+    for (const term of terms) sheet.addRow([term]);
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
