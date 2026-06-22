@@ -186,3 +186,15 @@ Result:
 ## Stage 22 note
 
 This batch intentionally focused on document parity follow-up only: export warning display, document asset migration, duplicate-logo controls, configurable PDF coordinates, and PO signature configurability. VPS build proof was not the target of this batch.
+
+## Stage 23 note
+
+This batch focused only on document-asset parity rules: Offer warning confirmation, document-specific logo selection, and per-user signature storage-key support. It does not claim final document visual parity.
+
+## Stage 24 note
+
+This batch updates only the signature ownership rule for PDF parity. It does not claim final layout parity.
+
+## Stage 25 note
+
+This batch fixes signature audit metadata and Challan prepared-by stability. It does not claim final document visual parity.
