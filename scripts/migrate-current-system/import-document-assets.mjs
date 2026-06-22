@@ -49,21 +49,30 @@ if (existsSync(authorizationDir)) {
   missing.push({ source: "authorization/Signature_*.png|jpg", storageKey: "assets/signatures/" });
 }
 
+const signatureCandidates = copied
+  .filter((item) => item.storageKey.startsWith("assets/signatures/"))
+  .map((item) => ({ storageKey: item.storageKey, filename: basename(item.storageKey) }));
+
 const manifest = {
   sourceRoot,
   storageRoot,
   copied,
   missing,
+  signatureCandidates,
   recommendedEnv: {
     FOS_LETTERHEAD_STORAGE_KEY: copied.some((item) => item.storageKey === "assets/letterhead.pdf") ? "assets/letterhead.pdf" : "",
     FOS_PDF_ASSET_MODE: "letterhead-only",
-    FOS_LOGO_STORAGE_KEY: copied.some((item) => item.storageKey === "assets/amoge_logo.png") ? "assets/amoge_logo.png" : "",
-    FOS_SIGNATURE_STORAGE_KEY: copied.find((item) => item.storageKey.startsWith("assets/signatures/"))?.storageKey || "",
+    FOS_LOGO_STORAGE_KEY: "",
+    FOS_OFFER_LOGO_STORAGE_KEY: copied.some((item) => item.storageKey === "assets/amoge_logo.png") ? "assets/amoge_logo.png" : "",
+    FOS_CHALLAN_LOGO_STORAGE_KEY: copied.some((item) => item.storageKey === "assets/amoge_logo.png") ? "assets/amoge_logo.png" : "",
+    FOS_PURCHASE_ORDER_LOGO_STORAGE_KEY: copied.some((item) => item.storageKey === "assets/NAFFCO_Logo_New.png") ? "assets/NAFFCO_Logo_New.png" : "",
+    FOS_SIGNATURE_STORAGE_KEY: signatureCandidates[0]?.storageKey || "",
   },
   notes: [
     "Default FOS_PDF_ASSET_MODE is letterhead-only to avoid duplicate logos when the letterhead already contains branding.",
     "Set FOS_PDF_ASSET_MODE=both only after visually confirming the letterhead does not already include the same logo.",
     "Set FOS_PO_INCLUDE_SIGNATURE=true only if purchase orders require signature stamping.",
+    "Use signatureCandidates to populate users.signatureStorageKey when signatures differ by prepared-by/user.",
   ],
 };
 
