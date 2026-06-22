@@ -57,8 +57,8 @@ export async function getChallanProjectForUser(projectId: string, user: SessionU
     include: {
       items: { orderBy: { sortOrder: "asc" } },
       shares: { select: { sharedWithUserId: true, permission: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      challanLogs: { orderBy: { createdAt: "desc" }, take: 1 },
+      owner: { select: { id: true, name: true, email: true, signatureStorageKey: true } },
+      challanLogs: { orderBy: { createdAt: "desc" }, take: 1, include: { preparedBy: { select: { id: true, name: true, email: true, signatureStorageKey: true } } } },
     },
   });
   if (!project || project.deletedAt || project.projectType !== "CHALLAN") return null;
@@ -132,7 +132,6 @@ export async function saveChallanProject({ user, projectId, input }: { user: Ses
         signedCopyReceived: nullableText(input.signedCopyReceived),
         remarks: nullableText(input.remarks),
         challanCarrier: nullableText(input.challanCarrier),
-        preparedByUserId: user.id,
         projectId: id,
       },
       create: {
@@ -151,6 +150,6 @@ export async function saveChallanProject({ user, projectId, input }: { user: Ses
 
     await tx.activityLog.create({ data: { actorUserId: user.id, actorNameSnapshot: user.name, action: existing ? "challan_saved" : "challan_created", entityType: "project", entityId: id, projectId: id, referenceNumber: input.referenceNumber, metadata: { itemCount: input.items.length } } });
 
-    return tx.project.findUnique({ where: { id: project.id }, include: { items: { orderBy: { sortOrder: "asc" } }, shares: { select: { sharedWithUserId: true, permission: true } }, owner: { select: { id: true, name: true, email: true } }, challanLogs: { orderBy: { createdAt: "desc" }, take: 1 } } });
+    return tx.project.findUnique({ where: { id: project.id }, include: { items: { orderBy: { sortOrder: "asc" } }, shares: { select: { sharedWithUserId: true, permission: true } }, owner: { select: { id: true, name: true, email: true, signatureStorageKey: true } }, challanLogs: { orderBy: { createdAt: "desc" }, take: 1, include: { preparedBy: { select: { id: true, name: true, email: true, signatureStorageKey: true } } } } } });
   });
 }
