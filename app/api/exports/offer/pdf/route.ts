@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getApiUser } from "@/lib/api/auth";
 import { buildOfferDocumentModel } from "@/lib/document-generation/offer-document";
 import { generateOfferPdfBuffer } from "@/lib/document-generation/offer-pdf";
+import { prependCoverPdf } from "@/lib/document-generation/pdf-postprocess";
+import { applyBusinessPdfAssets } from "@/lib/document-generation/pdf-assets";
 import { prisma } from "@/lib/db/prisma";
 import { getOfferConfig } from "@/lib/settings/offer-config";
 import { getOfferProjectForUser } from "@/lib/services/offer-project.service";
@@ -22,7 +24,15 @@ export async function POST(request: Request) {
 
   const offerConfig = await getOfferConfig();
   const model = buildOfferDocumentModel(project, offerConfig);
-  const buffer = generateOfferPdfBuffer(model);
+  const baseBuffer = generateOfferPdfBuffer(model);
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: baseBuffer, includeSignature: model.settings.includeSignature });
+  const coverStorageKey = project.offerSetting?.selectedCover?.storageKey || null;
+  const coverMerge = await prependCoverPdf({ coverStorageKey, documentPdf: assetResult.buffer });
+  const warnings = [
+    ...assetResult.warnings,
+    ...(coverStorageKey && !coverMerge.merged ? [`Selected cover could not be merged: ${coverMerge.reason || "unknown error"}`] : []),
+  ];
+  const buffer = coverMerge.buffer;
   const filename = safeOriginalFilename(`${project.referenceNumber || "offer"}.pdf`);
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/offers", filename, bytes: buffer });
 
@@ -37,7 +47,11 @@ export async function POST(request: Request) {
       metadata: {
         itemCount: model.items.length,
         generatedAt: model.generatedAt,
-        note: "Foundation PDF; final old-layout parity/cover merge still requires visual pass.",
+        coverMerged: coverMerge.merged,
+        coverMergeReason: coverMerge.reason,
+        pdfAssets: assetResult.applied,
+        warnings,
+        note: "Foundation PDF; final old-layout visual parity still requires golden visual pass.",
       },
     },
   });
@@ -52,9 +66,9 @@ export async function POST(request: Request) {
       projectId: project.id,
       referenceNumber: project.referenceNumber,
       filePathOrStorageKey: exportRecord.storageKey,
-      metadata: { filename: exportRecord.filename, itemCount: model.items.length },
+      metadata: { filename: exportRecord.filename, itemCount: model.items.length, coverMerged: coverMerge.merged, coverMergeReason: coverMerge.reason, pdfAssets: assetResult.applied, warnings },
     },
   });
 
-  return NextResponse.json({ export: exportRecord, downloadUrl: `/api/exports/${exportRecord.id}/download` }, { status: 201 });
+  return NextResponse.json({ export: exportRecord, downloadUrl: `/api/exports/${exportRecord.id}/download`, warnings }, { status: 201 });
 }
