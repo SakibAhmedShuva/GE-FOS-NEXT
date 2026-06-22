@@ -98,7 +98,8 @@ export default function PurchaseOrderBuilderClient({ initialProject = null }: { 
       const res = await fetch(`/api/exports/purchase-order/${kind}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId }) });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Export failed");
-      setMessage(`Generated ${kind.toUpperCase()} ${body.export.filename}`);
+      const warnings = Array.isArray(body.warnings) && body.warnings.length ? ` Warning: ${body.warnings.join(" ")}` : "";
+      setMessage(`Generated ${kind.toUpperCase()} ${body.export.filename}.${warnings}`);
       window.open(body.downloadUrl, "_blank");
     } catch (err) { setError(err instanceof Error ? err.message : "Export failed"); } finally { setBusy(false); }
   }
