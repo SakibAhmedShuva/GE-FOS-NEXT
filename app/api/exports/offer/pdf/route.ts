@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const offerConfig = await getOfferConfig();
   const model = buildOfferDocumentModel(project, offerConfig);
   const baseBuffer = generateOfferPdfBuffer(model);
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: baseBuffer, includeSignature: model.settings.includeSignature });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: baseBuffer, includeSignature: model.settings.includeSignature, signatureStorageKey: auth.user.signatureStorageKey, documentType: "offer" });
   const coverStorageKey = project.offerSetting?.selectedCover?.storageKey || null;
   const coverMerge = await prependCoverPdf({ coverStorageKey, documentPdf: assetResult.buffer });
   const warnings = [
