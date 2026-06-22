@@ -4,6 +4,7 @@ import { buildOfferDocumentModel } from "@/lib/document-generation/offer-documen
 import { generateOfferPdfBuffer } from "@/lib/document-generation/offer-pdf";
 import { prependCoverPdf } from "@/lib/document-generation/pdf-postprocess";
 import { applyBusinessPdfAssets } from "@/lib/document-generation/pdf-assets";
+import { pdfSignatureMetadata, resolvePdfSignatureSource } from "@/lib/document-generation/signature-source";
 import { prisma } from "@/lib/db/prisma";
 import { getOfferConfig } from "@/lib/settings/offer-config";
 import { getOfferProjectForUser } from "@/lib/services/offer-project.service";
@@ -25,7 +26,15 @@ export async function POST(request: Request) {
   const offerConfig = await getOfferConfig();
   const model = buildOfferDocumentModel(project, offerConfig);
   const baseBuffer = generateOfferPdfBuffer(model);
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: baseBuffer, includeSignature: model.settings.includeSignature, signatureStorageKey: auth.user.signatureStorageKey, documentType: "offer" });
+  const signatureSource = resolvePdfSignatureSource({
+    includeSignature: model.settings.includeSignature,
+    candidates: [
+      { type: "owner", userId: project.owner?.id, storageKey: project.owner?.signatureStorageKey },
+      { type: "exporter", userId: auth.user.id, storageKey: auth.user.signatureStorageKey },
+    ],
+  });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: baseBuffer, includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "offer" });
+  const signatureMetadata = pdfSignatureMetadata(signatureSource, assetResult.applied.signature);
   const coverStorageKey = project.offerSetting?.selectedCover?.storageKey || null;
   const coverMerge = await prependCoverPdf({ coverStorageKey, documentPdf: assetResult.buffer });
   const warnings = [
@@ -50,6 +59,7 @@ export async function POST(request: Request) {
         coverMerged: coverMerge.merged,
         coverMergeReason: coverMerge.reason,
         pdfAssets: assetResult.applied,
+        ...signatureMetadata,
         warnings,
         note: "Foundation PDF; final old-layout visual parity still requires golden visual pass.",
       },
@@ -66,7 +76,7 @@ export async function POST(request: Request) {
       projectId: project.id,
       referenceNumber: project.referenceNumber,
       filePathOrStorageKey: exportRecord.storageKey,
-      metadata: { filename: exportRecord.filename, itemCount: model.items.length, coverMerged: coverMerge.merged, coverMergeReason: coverMerge.reason, pdfAssets: assetResult.applied, warnings },
+      metadata: { filename: exportRecord.filename, itemCount: model.items.length, coverMerged: coverMerge.merged, coverMergeReason: coverMerge.reason, pdfAssets: assetResult.applied, ...signatureMetadata, warnings },
     },
   });
 
