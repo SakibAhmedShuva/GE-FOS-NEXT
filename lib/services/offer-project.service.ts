@@ -83,7 +83,7 @@ export async function getOfferProjectForUser(projectId: string, user: SessionUse
     where: { id: projectId },
     include: {
       items: { orderBy: { sortOrder: "asc" } },
-      offerSetting: true,
+      offerSetting: { include: { selectedCover: true } },
       shares: { select: { sharedWithUserId: true, permission: true } },
       owner: { select: { id: true, name: true, email: true } },
     },
@@ -248,7 +248,7 @@ export async function saveOfferProject({
 
     return tx.project.findUnique({
       where: { id: project.id },
-      include: { items: { orderBy: { sortOrder: "asc" } }, offerSetting: true, shares: { select: { sharedWithUserId: true, permission: true } }, owner: { select: { id: true, name: true, email: true } } },
+      include: { items: { orderBy: { sortOrder: "asc" } }, offerSetting: { include: { selectedCover: true } }, shares: { select: { sharedWithUserId: true, permission: true } }, owner: { select: { id: true, name: true, email: true } } },
     });
   });
 }
