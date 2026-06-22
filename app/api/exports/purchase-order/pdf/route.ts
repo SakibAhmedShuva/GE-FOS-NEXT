@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!project) return NextResponse.json({ error: "Purchase order not found" }, { status: 404 });
   const model = buildPurchaseOrderDocumentModel(project);
   const includeSignature = process.env.FOS_PO_INCLUDE_SIGNATURE === "true";
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: generatePurchaseOrderPdfBuffer(model), includeSignature });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: generatePurchaseOrderPdfBuffer(model), includeSignature, signatureStorageKey: auth.user.signatureStorageKey, documentType: "purchase-order" });
   const buffer = assetResult.buffer;
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/purchase-orders", filename: safeOriginalFilename(`${project.referenceNumber}.pdf`), bytes: buffer });
   const exportRecord = await prisma.export.create({ data: { projectId: project.id, exportType: "PDF", documentType: "PURCHASE_ORDER", filename: stored.originalFilename, storageKey: stored.storageKey, generatedByUserId: auth.user.id, metadata: { itemCount: model.items.length, originalOfferReference: model.originalOfferReference, pdfAssets: assetResult.applied, warnings: assetResult.warnings } } });
