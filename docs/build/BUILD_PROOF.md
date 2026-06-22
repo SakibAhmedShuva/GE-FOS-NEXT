@@ -182,3 +182,7 @@ Result:
 - `pnpm install --frozen-lockfile` passed.
 - `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
 - A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 21 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
+
+## Stage 22 note
+
+This batch intentionally focused on document parity follow-up only: export warning display, document asset migration, duplicate-logo controls, configurable PDF coordinates, and PO signature configurability. VPS build proof was not the target of this batch.
