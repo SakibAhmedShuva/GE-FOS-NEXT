@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const project = await getChallanProjectForUser(body.projectId, auth.user);
   if (!project) return NextResponse.json({ error: "Challan not found" }, { status: 404 });
   const model = buildChallanDocumentModel(project);
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: generateChallanPdfBuffer(model), includeSignature: model.includeSignature });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: generateChallanPdfBuffer(model), includeSignature: model.includeSignature, signatureStorageKey: auth.user.signatureStorageKey, documentType: "challan" });
   const buffer = assetResult.buffer;
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/challans", filename: safeOriginalFilename(`${project.referenceNumber}.pdf`), bytes: buffer });
   const exportRecord = await prisma.export.create({ data: { projectId: project.id, exportType: "PDF", documentType: "CHALLAN", filename: stored.originalFilename, storageKey: stored.storageKey, generatedByUserId: auth.user.id, metadata: { itemCount: model.items.length, pdfAssets: assetResult.applied, warnings: assetResult.warnings } } });
