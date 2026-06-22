@@ -83,6 +83,7 @@ model User {
   role            UserRole        @default(USER)
   isActive        Boolean         @default(true)
   passwordResetRequired Boolean   @default(true)
+  signatureStorageKey String?
   legacyPasswordImportedAt DateTime?
   lastLoginAt     DateTime?
   createdAt       DateTime        @default(now())
