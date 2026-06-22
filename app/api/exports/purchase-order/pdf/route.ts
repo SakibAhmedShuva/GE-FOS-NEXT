@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { buildPurchaseOrderDocumentModel } from "@/lib/document-generation/purchase-order-document";
 import { generatePurchaseOrderPdfBuffer } from "@/lib/document-generation/purchase-order-pdf";
 import { applyBusinessPdfAssets } from "@/lib/document-generation/pdf-assets";
+import { pdfSignatureMetadata, resolvePdfSignatureSource } from "@/lib/document-generation/signature-source";
 import { getPurchaseOrderForAdmin } from "@/lib/services/purchase-order-project.service";
 import { saveGeneratedFileToLocalStorage, safeOriginalFilename } from "@/lib/storage/local-storage";
 
@@ -18,10 +19,19 @@ export async function POST(request: Request) {
   if (!project) return NextResponse.json({ error: "Purchase order not found" }, { status: 404 });
   const model = buildPurchaseOrderDocumentModel(project);
   const includeSignature = process.env.FOS_PO_INCLUDE_SIGNATURE === "true";
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: generatePurchaseOrderPdfBuffer(model), includeSignature, signatureStorageKey: auth.user.signatureStorageKey, documentType: "purchase-order" });
+  const signatureSource = resolvePdfSignatureSource({
+    includeSignature,
+    candidates: [
+      { type: "owner", userId: project.owner?.id, storageKey: project.owner?.signatureStorageKey },
+      { type: "exporter", userId: auth.user.id, storageKey: auth.user.signatureStorageKey },
+    ],
+    globalStorageKey: process.env.FOS_PO_SIGNATURE_STORAGE_KEY || process.env.FOS_SIGNATURE_STORAGE_KEY || "",
+  });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: generatePurchaseOrderPdfBuffer(model), includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "purchase-order" });
+  const signatureMetadata = pdfSignatureMetadata(signatureSource, assetResult.applied.signature);
   const buffer = assetResult.buffer;
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/purchase-orders", filename: safeOriginalFilename(`${project.referenceNumber}.pdf`), bytes: buffer });
-  const exportRecord = await prisma.export.create({ data: { projectId: project.id, exportType: "PDF", documentType: "PURCHASE_ORDER", filename: stored.originalFilename, storageKey: stored.storageKey, generatedByUserId: auth.user.id, metadata: { itemCount: model.items.length, originalOfferReference: model.originalOfferReference, pdfAssets: assetResult.applied, warnings: assetResult.warnings } } });
-  await prisma.activityLog.create({ data: { actorUserId: auth.user.id, actorNameSnapshot: auth.user.name, action: "purchase_order_pdf_exported", entityType: "export", entityId: exportRecord.id, projectId: project.id, referenceNumber: project.referenceNumber, filePathOrStorageKey: exportRecord.storageKey, metadata: { originalOfferReference: model.originalOfferReference, pdfAssets: assetResult.applied, warnings: assetResult.warnings } } });
+  const exportRecord = await prisma.export.create({ data: { projectId: project.id, exportType: "PDF", documentType: "PURCHASE_ORDER", filename: stored.originalFilename, storageKey: stored.storageKey, generatedByUserId: auth.user.id, metadata: { itemCount: model.items.length, originalOfferReference: model.originalOfferReference, pdfAssets: assetResult.applied, ...signatureMetadata, warnings: assetResult.warnings } } });
+  await prisma.activityLog.create({ data: { actorUserId: auth.user.id, actorNameSnapshot: auth.user.name, action: "purchase_order_pdf_exported", entityType: "export", entityId: exportRecord.id, projectId: project.id, referenceNumber: project.referenceNumber, filePathOrStorageKey: exportRecord.storageKey, metadata: { originalOfferReference: model.originalOfferReference, pdfAssets: assetResult.applied, ...signatureMetadata, warnings: assetResult.warnings } } });
   return NextResponse.json({ export: exportRecord, downloadUrl: `/api/exports/${exportRecord.id}/download`, warnings: assetResult.warnings }, { status: 201 });
 }
