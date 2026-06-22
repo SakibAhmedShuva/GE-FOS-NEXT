@@ -93,6 +93,7 @@ export function buildOfferDocumentModel(project: LoadedOfferProject, config: Off
     settings: {
       includeSignature: Boolean(settings.includeSignature),
       selectedCoverId: String(settings.selectedCoverId ?? ""),
+      selectedCover: recordValue(settings.selectedCover),
       tncState: recordValue(settings.tncState),
       isSummaryPageEnabled: Boolean(settings.isSummaryPageEnabled),
       summaryScopeDescriptions: recordValue(settings.summaryScopeDescriptions),
