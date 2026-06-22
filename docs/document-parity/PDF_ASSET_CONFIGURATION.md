@@ -72,10 +72,10 @@ FOS_SIGNATURE_STORAGE_KEY=assets/signatures/Signature_default.png
 For user/prepared-by-specific signatures, set:
 
 ```text
-users.signature_storage_key / User.signatureStorageKey
+User.signatureStorageKey
 ```
 
-The admin Users page now exposes a signature storage key field. PDF exports use the current user's `signatureStorageKey` first, then fall back to `FOS_SIGNATURE_STORAGE_KEY`.
+The admin Users page now exposes a signature storage key field. PDF exports use the project owner/prepared-by user signature first, then fall back to the current exporter and finally `FOS_SIGNATURE_STORAGE_KEY`.
 
 ## Logo coordinates
 
@@ -111,7 +111,7 @@ Purchase order signature stamping is configurable:
 FOS_PO_INCLUDE_SIGNATURE=true
 ```
 
-Leave it unset/false if purchase orders should not carry a signature.
+Leave it unset/false if purchase orders should not carry a signature. If PO documents need a fixed authorized signatory, set `FOS_PO_SIGNATURE_STORAGE_KEY`; it is used as the PO global fallback before `FOS_SIGNATURE_STORAGE_KEY`.
 
 ## Asset migration command
 
@@ -140,3 +140,21 @@ docs/migration/document-assets-manifest.json
 Use the manifest `signatureCandidates` array to assign `signatureStorageKey` values to the matching users.
 
 Do not call PDF asset placement final until a real old-vs-new visual comparison confirms letterhead, logo, and signature placement.
+
+
+## Signature audit metadata
+
+PDF export metadata records signature status without misleading user IDs:
+
+```text
+signatureRequested: true/false
+signatureApplied: true/false
+signatureSourceType: preparedBy | owner | exporter | global | none
+signatureSourceUserId: user id only for preparedBy/owner/exporter, otherwise null
+```
+
+When no signature is requested, source type is `none`. When only the global env fallback is used, `signatureSourceUserId` is `null`.
+
+## Challan prepared-by rule
+
+Challan prepared-by is now treated as the original challan log preparer. Saving/editing an existing challan updates the challan details but does not overwrite `preparedByUserId`. This prevents an admin edit from accidentally changing the signature owner.
