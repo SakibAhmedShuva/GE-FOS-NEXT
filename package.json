@@ -16,7 +16,12 @@
     "migration:catalog:write": "node scripts/migrate-current-system/import-catalog-workbooks.mjs --write",
     "migration:verify-final": "node scripts/migrate-current-system/verify-final-migration.mjs",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "documents:compare-golden": "node scripts/compare-golden-documents.mjs",
+    "package:clean": "node scripts/package-clean-delivery.mjs",
+    "package:verify": "node scripts/verify-delivery-zip.mjs",
+    "readiness:check": "node scripts/production-readiness-check.mjs",
+    "readiness:build": "node scripts/production-readiness-check.mjs --run-build"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -24,6 +29,7 @@
     "exceljs": "^4.4.0",
     "jose": "^6.0.11",
     "next": "^15.1.11",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^3.25.67"
