@@ -21,7 +21,8 @@
     "package:clean": "node scripts/package-clean-delivery.mjs",
     "package:verify": "node scripts/verify-delivery-zip.mjs",
     "readiness:check": "node scripts/production-readiness-check.mjs",
-    "readiness:build": "node scripts/production-readiness-check.mjs --run-build"
+    "readiness:build": "node scripts/production-readiness-check.mjs --run-build",
+    "migration:document-assets": "node scripts/migrate-current-system/import-document-assets.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
