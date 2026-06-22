@@ -1,6 +1,6 @@
 # PDF asset configuration
 
-Stage 22 adds the asset controls needed to avoid duplicate logos and to make letterhead/logo/signature placement tunable without code edits.
+Stage 22 and Stage 23 add the asset controls needed to avoid duplicate logos, support document-specific logo rules, support per-user signatures, and make letterhead/logo/signature placement tunable without code edits.
 
 ## Storage keys
 
@@ -10,7 +10,6 @@ Recommended migrated keys:
 
 ```bash
 FOS_LETTERHEAD_STORAGE_KEY=assets/letterhead.pdf
-FOS_LOGO_STORAGE_KEY=assets/amoge_logo.png
 FOS_SIGNATURE_STORAGE_KEY=assets/signatures/Signature_<name>.png
 ```
 
@@ -35,6 +34,48 @@ FOS_PDF_ASSET_MODE=none            # no letterhead/logo stamping
 ```
 
 Default is `letterhead-only` so a company logo is not accidentally printed twice when the letterhead PDF already contains branding.
+
+## AMOGE / NAFFCO logo rule
+
+The app now supports both a global logo and document-specific logo keys.
+
+Preferred rule for this migration:
+
+```bash
+# Leave global logo empty if the letterhead already contains branding.
+FOS_LOGO_STORAGE_KEY=
+
+# Use these only when FOS_PDF_ASSET_MODE is logo-only or both.
+FOS_OFFER_LOGO_STORAGE_KEY=assets/amoge_logo.png
+FOS_CHALLAN_LOGO_STORAGE_KEY=assets/amoge_logo.png
+FOS_PURCHASE_ORDER_LOGO_STORAGE_KEY=assets/NAFFCO_Logo_New.png
+```
+
+Fallback order:
+
+```text
+explicit logo key from code, if any
+then document-specific env key
+then FOS_LOGO_STORAGE_KEY
+```
+
+Do not set `FOS_PDF_ASSET_MODE=both` until old-vs-new visual review confirms the letterhead does not already include the same logo.
+
+## Per-user signature mapping
+
+The global fallback remains:
+
+```bash
+FOS_SIGNATURE_STORAGE_KEY=assets/signatures/Signature_default.png
+```
+
+For user/prepared-by-specific signatures, set:
+
+```text
+users.signature_storage_key / User.signatureStorageKey
+```
+
+The admin Users page now exposes a signature storage key field. PDF exports use the current user's `signatureStorageKey` first, then fall back to `FOS_SIGNATURE_STORAGE_KEY`.
 
 ## Logo coordinates
 
@@ -95,5 +136,7 @@ It writes a manifest at:
 ```text
 docs/migration/document-assets-manifest.json
 ```
+
+Use the manifest `signatureCandidates` array to assign `signatureStorageKey` values to the matching users.
 
 Do not call PDF asset placement final until a real old-vs-new visual comparison confirms letterhead, logo, and signature placement.
