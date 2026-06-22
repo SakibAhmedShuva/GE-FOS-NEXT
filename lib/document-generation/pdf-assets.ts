@@ -3,6 +3,7 @@ import { PDFDocument, type PDFImage, type PDFPage } from "pdf-lib";
 import { resolveStoragePath } from "@/lib/storage/local-storage";
 
 export type PdfAssetMode = "none" | "letterhead-only" | "logo-only" | "both";
+export type PdfDocumentType = "offer" | "challan" | "purchase-order";
 
 export type PdfAssetResult = {
   buffer: Buffer;
@@ -23,6 +24,16 @@ function parseAssetMode(): PdfAssetMode {
   const raw = (process.env.FOS_PDF_ASSET_MODE || "letterhead-only").trim().toLowerCase();
   if (raw === "none" || raw === "letterhead-only" || raw === "logo-only" || raw === "both") return raw;
   return "letterhead-only";
+}
+
+function documentLogoKey(documentType?: PdfDocumentType, explicit?: string | null) {
+  if (explicit) return explicit;
+  if (documentType === "offer" && process.env.FOS_OFFER_LOGO_STORAGE_KEY) return process.env.FOS_OFFER_LOGO_STORAGE_KEY;
+  if (documentType === "challan" && process.env.FOS_CHALLAN_LOGO_STORAGE_KEY) return process.env.FOS_CHALLAN_LOGO_STORAGE_KEY;
+  if (documentType === "purchase-order" && (process.env.FOS_PURCHASE_ORDER_LOGO_STORAGE_KEY || process.env.FOS_PO_LOGO_STORAGE_KEY)) {
+    return process.env.FOS_PURCHASE_ORDER_LOGO_STORAGE_KEY || process.env.FOS_PO_LOGO_STORAGE_KEY || "";
+  }
+  return process.env.FOS_LOGO_STORAGE_KEY || "";
 }
 
 function readNumberEnv(name: string) {
@@ -132,19 +143,21 @@ export async function applyBusinessPdfAssets({
   letterheadStorageKey,
   logoStorageKey,
   signatureStorageKey,
+  documentType,
 }: {
   documentPdf: Buffer;
   includeSignature?: boolean;
   letterheadStorageKey?: string | null;
   logoStorageKey?: string | null;
   signatureStorageKey?: string | null;
+  documentType?: PdfDocumentType;
 }): Promise<PdfAssetResult> {
   const warnings: string[] = [];
   const assetMode = parseAssetMode();
   const keys = {
     firstPageLetterhead: assetKey("FOS_LETTERHEAD_FIRST_PAGE_STORAGE_KEY", letterheadStorageKey) || assetKey("FOS_LETTERHEAD_STORAGE_KEY"),
     continuationLetterhead: assetKey("FOS_LETTERHEAD_CONTINUATION_STORAGE_KEY") || assetKey("FOS_LETTERHEAD_STORAGE_KEY", letterheadStorageKey),
-    logo: assetKey("FOS_LOGO_STORAGE_KEY", logoStorageKey),
+    logo: documentLogoKey(documentType, logoStorageKey),
     signature: assetKey("FOS_SIGNATURE_STORAGE_KEY", signatureStorageKey),
   };
 
