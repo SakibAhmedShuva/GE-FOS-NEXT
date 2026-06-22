@@ -128,3 +128,57 @@ pnpm install --frozen-lockfile
 pnpm prisma generate
 pnpm build
 ```
+
+## Stage 19 check
+
+Stage 19 added actual selected-cover PDF merge for Offer PDF export and removed visible pending-marker lines from generated PDFs.
+
+Commands run:
+
+```bash
+npx --yes pnpm@10.15.1 install --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes tsc --noEmit --pretty false
+```
+
+Result:
+
+- `pnpm install --frozen-lockfile` passed.
+- `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
+- A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 19 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
+
+## Stage 20 check
+
+Stage 20 removed internal/debug lines from customer-facing Offer PDF output and changed cover-merge failure behavior to return a clear warning to the UI.
+
+Commands run:
+
+```bash
+npx --yes pnpm@10.15.1 install --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes tsc --noEmit --pretty false
+```
+
+Result:
+
+- `pnpm install --frozen-lockfile` passed.
+- `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
+- A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 20 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
+
+## Stage 21 check
+
+Stage 21 added PDF asset stamping hooks for letterhead, logo, and signature through safe storage keys.
+
+Commands run:
+
+```bash
+npx --yes pnpm@10.15.1 install --frozen-lockfile
+npx --yes pnpm@10.15.1 prisma generate
+npx --yes tsc --noEmit --pretty false
+```
+
+Result:
+
+- `pnpm install --frozen-lockfile` passed.
+- `pnpm prisma generate` is still blocked in this sandbox by `getaddrinfo EAI_AGAIN binaries.prisma.sh`.
+- A temporary local TypeScript declaration stub for `@prisma/client` was used only to check Stage 21 code changes, then removed before packaging. This is not a replacement for real Prisma generation.
