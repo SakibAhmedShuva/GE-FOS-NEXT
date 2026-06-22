@@ -434,7 +434,8 @@ export default function OfferCalculatorClient({ initialProject = null }: { initi
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || `${kind.toUpperCase()} export failed`);
-      setSuccess(`Generated ${kind.toUpperCase()} ${body.export.filename}`);
+      const warnings = Array.isArray(body.warnings) && body.warnings.length ? ` Warning: ${body.warnings.join(" ")}` : "";
+      setSuccess(`Generated ${kind.toUpperCase()} ${body.export.filename}.${warnings}`);
       window.open(body.downloadUrl, "_blank");
     } catch (err) {
       setError(err instanceof Error ? err.message : `${kind.toUpperCase()} export failed`);
