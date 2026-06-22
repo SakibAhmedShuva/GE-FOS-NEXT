@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       { type: "exporter", userId: auth.user.id, storageKey: auth.user.signatureStorageKey },
     ],
   });
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: generateChallanPdfBuffer(model), includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "challan" });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: await generateChallanPdfBuffer(model), includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "challan" });
   const signatureMetadata = pdfSignatureMetadata(signatureSource, assetResult.applied.signature);
   const buffer = assetResult.buffer;
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/challans", filename: safeOriginalFilename(`${project.referenceNumber}.pdf`), bytes: buffer });

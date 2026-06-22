@@ -198,3 +198,7 @@ This batch updates only the signature ownership rule for PDF parity. It does not
 ## Stage 25 note
 
 This batch fixes signature audit metadata and Challan prepared-by stability. It does not claim final document visual parity.
+
+## Stage 26 note
+
+This batch starts document layout parity by replacing plain text PDFs with a shared business-table PDF renderer for Offer, Challan, and Purchase Order. It does not claim final visual parity until golden comparison is run.

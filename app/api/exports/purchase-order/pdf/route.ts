@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     ],
     globalStorageKey: process.env.FOS_PO_SIGNATURE_STORAGE_KEY || process.env.FOS_SIGNATURE_STORAGE_KEY || "",
   });
-  const assetResult = await applyBusinessPdfAssets({ documentPdf: generatePurchaseOrderPdfBuffer(model), includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "purchase-order" });
+  const assetResult = await applyBusinessPdfAssets({ documentPdf: await generatePurchaseOrderPdfBuffer(model), includeSignature: signatureSource.signatureRequested, signatureStorageKey: signatureSource.signatureStorageKey, documentType: "purchase-order" });
   const signatureMetadata = pdfSignatureMetadata(signatureSource, assetResult.applied.signature);
   const buffer = assetResult.buffer;
   const stored = await saveGeneratedFileToLocalStorage({ folder: "exports/purchase-orders", filename: safeOriginalFilename(`${project.referenceNumber}.pdf`), bytes: buffer });

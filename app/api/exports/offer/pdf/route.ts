@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const offerConfig = await getOfferConfig();
   const model = buildOfferDocumentModel(project, offerConfig);
-  const baseBuffer = generateOfferPdfBuffer(model);
+  const baseBuffer = await generateOfferPdfBuffer(model);
   const signatureSource = resolvePdfSignatureSource({
     includeSignature: model.settings.includeSignature,
     candidates: [
