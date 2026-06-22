@@ -11,6 +11,7 @@ export type SessionUser = {
   name: string;
   role: "ADMIN" | "USER";
   isActive: boolean;
+  signatureStorageKey?: string | null;
 };
 
 function getSessionSecret() {
@@ -42,7 +43,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, role: true, isActive: true },
+      select: { id: true, email: true, name: true, role: true, isActive: true, signatureStorageKey: true },
     });
 
     if (!user || !user.isActive) return null;
