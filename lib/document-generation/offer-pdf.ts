@@ -22,16 +22,22 @@ function isVisible(model: OfferDocumentModel, aliases: string[], fallback = true
   return existing.some((key) => visible[key] !== false);
 }
 
-function isAdmin(model: OfferDocumentModel) {
-  const maybeUser = (model as unknown as { user?: { role?: string } }).user;
-  return maybeUser?.role === "admin" || maybeUser?.role === "ADMIN";
+function canShowPoColumns(model: OfferDocumentModel) {
+  const explicit = (model as unknown as { canShowPoColumns?: boolean }).canShowPoColumns;
+  if (typeof explicit === "boolean") return explicit;
+  const settingsExplicit = (model.settings as unknown as { canShowPoColumns?: boolean }).canShowPoColumns;
+  if (typeof settingsExplicit === "boolean") return settingsExplicit;
+  const role = (model as unknown as { userRole?: string; exporterRole?: string; user?: { role?: string } }).userRole
+    || (model as unknown as { exporterRole?: string }).exporterRole
+    || (model as unknown as { user?: { role?: string } }).user?.role;
+  return role === "admin" || role === "ADMIN";
 }
 
 function offerColumns(model: OfferDocumentModel): BusinessPdfColumn<OfferItem>[] {
   const foreignVisible = isVisible(model, ["foreign_price", "foreignPrice", "foreign", "showForeignPrice", "foreignPriceUsd"], true);
   const localVisible = isVisible(model, ["local_supply_price", "localSupply", "local", "showLocalSupply", "localSupplyPriceBdt"], false);
   const installVisible = isVisible(model, ["installation_price", "installation", "install", "showInstallation", "installationPriceBdt"], false);
-  const poVisible = isAdmin(model) && isVisible(model, ["po_price", "po", "showPo", "poPriceUsd"], false);
+  const poVisible = canShowPoColumns(model) && isVisible(model, ["po_price", "po", "showPo", "poPriceUsd"], false);
 
   const labels = (model.labels || {}) as Record<string, string>;
   const columns: BusinessPdfColumn<OfferItem>[] = [
@@ -43,26 +49,26 @@ function offerColumns(model: OfferDocumentModel): BusinessPdfColumn<OfferItem>[]
 
   if (foreignVisible) {
     columns.push(
-      { key: "foreignPriceUsd", label: `${labels.foreignPrice || "FOREIGN PRICE"}\nPRICE\n(USD)`, width: 33.6, align: "right", render: (item) => money(item.foreignPriceUsd) },
-      { key: "foreignTotalUsd", label: `${labels.foreignPrice || "FOREIGN PRICE"}\nTOTAL\n(USD)`, width: 33.6, align: "right", render: (item) => money(item.foreignTotalUsd) },
+      { key: "foreignPriceUsd", group: labels.foreignPrice || "FOREIGN PRICE", label: "PRICE\n(USD)", width: 33.6, align: "right", render: (item) => money(item.foreignPriceUsd) },
+      { key: "foreignTotalUsd", group: labels.foreignPrice || "FOREIGN PRICE", label: "TOTAL\n(USD)", width: 33.6, align: "right", render: (item) => money(item.foreignTotalUsd) },
     );
   }
   if (poVisible) {
     columns.push(
-      { key: "poPriceUsd", label: "PO PRICE\nPRICE\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poPriceUsd) },
-      { key: "poTotalUsd", label: "PO PRICE\nTOTAL\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poTotalUsd) },
+      { key: "poPriceUsd", group: "PO PRICE", label: "PRICE\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poPriceUsd) },
+      { key: "poTotalUsd", group: "PO PRICE", label: "TOTAL\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poTotalUsd) },
     );
   }
   if (localVisible) {
     columns.push(
-      { key: "localSupplyPriceBdt", label: `${labels.localPrice || "LOCAL SUPPLY PRICE"}\nPRICE\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.localSupplyPriceBdt) },
-      { key: "localSupplyTotalBdt", label: `${labels.localPrice || "LOCAL SUPPLY PRICE"}\nTOTAL\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.localSupplyTotalBdt) },
+      { key: "localSupplyPriceBdt", group: labels.localPrice || "LOCAL SUPPLY PRICE", label: "PRICE\n(BDT)", width: 33.6, align: "right", render: (item) => money(item.localSupplyPriceBdt) },
+      { key: "localSupplyTotalBdt", group: labels.localPrice || "LOCAL SUPPLY PRICE", label: "TOTAL\n(BDT)", width: 33.6, align: "right", render: (item) => money(item.localSupplyTotalBdt) },
     );
   }
   if (installVisible) {
     columns.push(
-      { key: "installationPriceBdt", label: `${labels.installationPrice || "INSTALLATION PRICE"}\nPRICE\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.installationPriceBdt) },
-      { key: "installationTotalBdt", label: `${labels.installationPrice || "INSTALLATION PRICE"}\nTOTAL\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.installationTotalBdt) },
+      { key: "installationPriceBdt", group: labels.installationPrice || "INSTALLATION PRICE", label: "PRICE\n(BDT)", width: 33.6, align: "right", render: (item) => money(item.installationPriceBdt) },
+      { key: "installationTotalBdt", group: labels.installationPrice || "INSTALLATION PRICE", label: "TOTAL\n(BDT)", width: 33.6, align: "right", render: (item) => money(item.installationTotalBdt) },
     );
   }
   return columns;
@@ -123,7 +129,7 @@ export async function generateOfferPdfBuffer(model: OfferDocumentModel) {
   const scopeLines = summaryScopeLines(model);
   const displayReference = model.referenceNumber.includes("_") ? model.referenceNumber.split("_").pop() || model.referenceNumber : model.referenceNumber;
   return buildBusinessPdfBuffer<OfferItem>({
-    title: model.settings.isSummaryPageEnabled ? "BILL OF QUANTITIES" : "FINANCIAL OFFER",
+    title: "FINANCIAL OFFER",
     subtitle: model.referenceNumber,
     reserveSignatureSpace: model.settings.includeSignature,
     metadataRows: [
@@ -137,7 +143,7 @@ export async function generateOfferPdfBuffer(model: OfferDocumentModel) {
     rows: model.items,
     summarySections: [
       ...(scopeLines.length ? [{ title: "PRICE SUMMARY", lines: scopeLines, startOnNewPage: true }] : []),
-      { title: "Financial Summary", lines: summaryLines(model) },
+      { title: "PRICE SUMMARY", lines: summaryLines(model) },
       ...(terms.length ? [{ title: "Terms & Conditions", lines: terms, startOnNewPage: true }] : []),
     ],
   });
