@@ -22,20 +22,49 @@ function isVisible(model: OfferDocumentModel, aliases: string[], fallback = true
   return existing.some((key) => visible[key] !== false);
 }
 
+function isAdmin(model: OfferDocumentModel) {
+  const maybeUser = (model as unknown as { user?: { role?: string } }).user;
+  return maybeUser?.role === "admin" || maybeUser?.role === "ADMIN";
+}
+
 function offerColumns(model: OfferDocumentModel): BusinessPdfColumn<OfferItem>[] {
+  const foreignVisible = isVisible(model, ["foreign_price", "foreignPrice", "foreign", "showForeignPrice", "foreignPriceUsd"], true);
+  const localVisible = isVisible(model, ["local_supply_price", "localSupply", "local", "showLocalSupply", "localSupplyPriceBdt"], false);
+  const installVisible = isVisible(model, ["installation_price", "installation", "install", "showInstallation", "installationPriceBdt"], false);
+  const poVisible = isAdmin(model) && isVisible(model, ["po_price", "po", "showPo", "poPriceUsd"], false);
+
+  const labels = (model.labels || {}) as Record<string, string>;
   const columns: BusinessPdfColumn<OfferItem>[] = [
-    { key: "serial", label: "SL", width: 24, align: "center", render: (item) => String(item.serial) },
+    { key: "serial", label: "SL", width: 8, align: "center", render: (item) => String(item.serial) },
+    { key: "description", label: "DESCRIPTION", width: 200, render: (item) => item.description || "-" },
+    { key: "qty", label: "QTY", width: 10, align: "center", render: (item) => money(Number(item.qty || 0)).replace(".00", "") },
+    { key: "unit", label: "UNIT", width: 12, align: "center", render: (item) => item.unit || "-" },
   ];
-  if (isVisible(model, ["itemCode", "code", "showItemCode"])) columns.push({ key: "itemCode", label: "Item Code", width: 52, render: (item) => item.itemCode || "-" });
-  columns.push({ key: "description", label: "Description", width: 170, render: (item) => item.description || "-" });
-  if (isVisible(model, ["qty", "quantity", "showQty"])) columns.push({ key: "qty", label: "Qty", width: 30, align: "right", render: (item) => money(Number(item.qty || 0)).replace(".00", "") });
-  if (isVisible(model, ["unit", "showUnit"])) columns.push({ key: "unit", label: "Unit", width: 28, render: (item) => item.unit || "-" });
-  if (isVisible(model, ["make", "model", "makeModel", "showMakeModel"])) columns.push({ key: "make", label: "Make/Model", width: 55, render: (item) => [item.make, item.model].filter(Boolean).join(" / ") || "-" });
-  if (isVisible(model, ["foreignPriceUsd", "foreignUnitPrice", "unitUsd", "foreign", "showForeignPrice"])) columns.push({ key: "foreignPriceUsd", label: "Unit USD", width: 45, align: "right", render: (item) => money(item.foreignPriceUsd) });
-  if (isVisible(model, ["foreignTotalUsd", "foreignTotal", "totalUsd", "foreign", "showForeignTotal"])) columns.push({ key: "foreignTotalUsd", label: "Total USD", width: 50, align: "right", render: (item) => money(item.foreignTotalUsd) });
-  if (isVisible(model, ["localSupplyTotalBdt", "localSupply", "local", "showLocalSupply"])) columns.push({ key: "localSupplyTotalBdt", label: "Local BDT", width: 45, align: "right", render: (item) => money(item.localSupplyTotalBdt) });
-  if (isVisible(model, ["installationTotalBdt", "installation", "install", "showInstallation"])) columns.push({ key: "installationTotalBdt", label: "Install BDT", width: 46, align: "right", render: (item) => money(item.installationTotalBdt) });
-  if (isVisible(model, ["poTotalUsd", "po", "poPriceUsd", "showPo"], false)) columns.push({ key: "poTotalUsd", label: "PO USD", width: 45, align: "right", render: (item) => money(item.poTotalUsd) });
+
+  if (foreignVisible) {
+    columns.push(
+      { key: "foreignPriceUsd", label: `${labels.foreignPrice || "FOREIGN PRICE"}\nPRICE\n(USD)`, width: 33.6, align: "right", render: (item) => money(item.foreignPriceUsd) },
+      { key: "foreignTotalUsd", label: `${labels.foreignPrice || "FOREIGN PRICE"}\nTOTAL\n(USD)`, width: 33.6, align: "right", render: (item) => money(item.foreignTotalUsd) },
+    );
+  }
+  if (poVisible) {
+    columns.push(
+      { key: "poPriceUsd", label: "PO PRICE\nPRICE\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poPriceUsd) },
+      { key: "poTotalUsd", label: "PO PRICE\nTOTAL\n(USD)", width: 33.6, align: "right", render: (item) => money(item.poTotalUsd) },
+    );
+  }
+  if (localVisible) {
+    columns.push(
+      { key: "localSupplyPriceBdt", label: `${labels.localPrice || "LOCAL SUPPLY PRICE"}\nPRICE\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.localSupplyPriceBdt) },
+      { key: "localSupplyTotalBdt", label: `${labels.localPrice || "LOCAL SUPPLY PRICE"}\nTOTAL\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.localSupplyTotalBdt) },
+    );
+  }
+  if (installVisible) {
+    columns.push(
+      { key: "installationPriceBdt", label: `${labels.installationPrice || "INSTALLATION PRICE"}\nPRICE\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.installationPriceBdt) },
+      { key: "installationTotalBdt", label: `${labels.installationPrice || "INSTALLATION PRICE"}\nTOTAL\n(BDT)`, width: 33.6, align: "right", render: (item) => money(item.installationTotalBdt) },
+    );
+  }
   return columns;
 }
 
@@ -51,23 +80,54 @@ function termsLines(model: OfferDocumentModel) {
   return lines;
 }
 
+function financials(model: OfferDocumentModel) {
+  return ((model as unknown as { financials?: Record<string, unknown> }).financials || (model.settings as unknown as { financials?: Record<string, unknown> }).financials || {}) as Record<string, unknown>;
+}
+
+function enabledAmount(fin: Record<string, unknown>, flag: string, key: string) {
+  return fin[flag] ? Number(fin[key] || 0) : 0;
+}
+
+function summaryLines(model: OfferDocumentModel) {
+  const fin = financials(model);
+  const freight = enabledAmount(fin, "use_freight", "freight_foreign_usd");
+  const delivery = enabledAmount(fin, "use_delivery", "delivery_local_bdt");
+  const vat = enabledAmount(fin, "use_vat", "vat_local_bdt");
+  const ait = enabledAmount(fin, "use_ait", "ait_local_bdt");
+  const totalInBdt = enabledAmount(fin, "use_total_in_bdt", "total_in_bdt") || model.totals.adjustments.totalInBdt;
+  const customsDuty = enabledAmount(fin, "use_customs_duty", "customs_duty_bdt") || model.totals.adjustments.customsDutyBdt;
+  const lines = [
+    `Subtotal: ${money(model.totals.subtotals.foreignUsd)} USD`,
+  ];
+  if (freight > 0) lines.push(`Sea Freight: ${money(freight)} USD`);
+  if (totalInBdt > 0) lines.push(`Total in BDT: ${money(totalInBdt)} BDT`);
+  if (customsDuty > 0) lines.push(`Customs Duty: ${money(customsDuty)} BDT`);
+  if (delivery > 0) lines.push(`Delivery Charge: ${money(delivery)} BDT`);
+  if (vat > 0) lines.push(`VAT: ${money(vat)} BDT`);
+  if (ait > 0) lines.push(`AIT: ${money(ait)} BDT`);
+  lines.push(`${model.labels.grandtotalForeign || "Grand Total"}: ${money(model.totals.grandTotals.foreignUsd)} USD / ${money(model.totals.grandTotals.foreignGrandTotalBdt)} BDT`);
+  lines.push(`Amount In Words: ${model.amountInWords.foreignGrandTotalBdt}`);
+  return lines;
+}
+
 function summaryScopeLines(model: OfferDocumentModel) {
   if (!model.settings.isSummaryPageEnabled) return [];
   const scopes = model.settings.summaryScopeDescriptions as Record<string, unknown>;
   return Object.entries(scopes || {})
     .filter(([, value]) => String(value ?? "").trim())
-    .map(([key, value]) => `${key}: ${String(value)}`);
+    .map(([key, value], index) => `${String.fromCharCode(65 + index)}. ${String(value)}`);
 }
 
 export async function generateOfferPdfBuffer(model: OfferDocumentModel) {
   const terms = termsLines(model);
   const scopeLines = summaryScopeLines(model);
+  const displayReference = model.referenceNumber.includes("_") ? model.referenceNumber.split("_").pop() || model.referenceNumber : model.referenceNumber;
   return buildBusinessPdfBuffer<OfferItem>({
-    title: "FINANCIAL OFFER",
+    title: model.settings.isSummaryPageEnabled ? "BILL OF QUANTITIES" : "FINANCIAL OFFER",
     subtitle: model.referenceNumber,
     reserveSignatureSpace: model.settings.includeSignature,
     metadataRows: [
-      ["Reference", model.referenceNumber],
+      ["Ref", displayReference],
       ["Client", model.client.name || "-"],
       ["Address", model.client.address || "-"],
       ["Prepared By", model.preparedBy || "-"],
@@ -76,23 +136,8 @@ export async function generateOfferPdfBuffer(model: OfferDocumentModel) {
     columns: offerColumns(model),
     rows: model.items,
     summarySections: [
-      {
-        title: "Financial Summary",
-        lines: [
-          `Subtotal Foreign USD: ${money(model.totals.subtotals.foreignUsd)}`,
-          `${model.labels.grandtotalForeign}: ${money(model.totals.grandTotals.foreignUsd)}`,
-          `PO Grand Total USD: ${money(model.totals.grandTotals.poUsd)}`,
-          `Local Supply Grand Total BDT: ${money(model.totals.grandTotals.localSupplyBdt)}`,
-          `Installation Grand Total BDT: ${money(model.totals.grandTotals.installationBdt)}`,
-          `BDT Conversion Rate: ${money(model.config.bdt_conversion_rate)}`,
-          `Customs Duty Percentage: ${money(model.config.customs_duty_percentage)}%`,
-          `Total In BDT: ${money(model.totals.adjustments.totalInBdt)}`,
-          `Customs Duty BDT: ${money(model.totals.adjustments.customsDutyBdt)}`,
-          `Foreign Grand Total With Customs BDT: ${money(model.totals.grandTotals.foreignGrandTotalBdt)}`,
-          `Amount In Words: ${model.amountInWords.foreignGrandTotalBdt}`,
-        ],
-      },
-      ...(scopeLines.length ? [{ title: "Scope Summary", lines: scopeLines, startOnNewPage: true }] : []),
+      ...(scopeLines.length ? [{ title: "PRICE SUMMARY", lines: scopeLines, startOnNewPage: true }] : []),
+      { title: "Financial Summary", lines: summaryLines(model) },
       ...(terms.length ? [{ title: "Terms & Conditions", lines: terms, startOnNewPage: true }] : []),
     ],
   });
