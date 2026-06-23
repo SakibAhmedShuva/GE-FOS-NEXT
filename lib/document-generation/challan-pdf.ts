@@ -5,13 +5,20 @@ import { money } from "@/lib/document-generation/basic-pdf";
 type ChallanDocumentModel = ReturnType<typeof buildChallanDocumentModel>;
 type ChallanItem = ChallanDocumentModel["items"][number];
 
+function formatBusinessDate(value: string | Date) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || "");
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(date).replace(/ /g, "-");
+}
+
 export async function generateChallanPdfBuffer(model: ChallanDocumentModel) {
   return buildBusinessPdfBuffer<ChallanItem>({
     title: "CHALLAN",
     subtitle: model.referenceNumber,
+    reserveSignatureSpace: model.includeSignature,
     metadataRows: [
       ["Reference", model.referenceNumber],
-      ["Date", model.challanDate || "-"],
+      ["Date", formatBusinessDate(model.challanDate)],
       ["Client", model.client.name || "-"],
       ["Address", model.client.address || "-"],
       ["Carrier", model.challanCarrier || "-"],
@@ -32,7 +39,6 @@ export async function generateChallanPdfBuffer(model: ChallanDocumentModel) {
           `Signed Copy Received: ${model.signedCopyReceived || "-"}`,
           `Remarks: ${model.remarks || "-"}`,
           `Prepared By: ${model.preparedBy || "-"}`,
-          `Signature Included: ${model.includeSignature ? "Yes" : "No"}`,
         ],
       },
     ],
