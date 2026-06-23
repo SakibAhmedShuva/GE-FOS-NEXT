@@ -5,6 +5,7 @@ export type BusinessPdfColumn<T> = {
   label: string;
   width: number;
   align?: "left" | "right" | "center";
+  group?: string;
   render?: (row: T) => string;
 };
 
@@ -154,21 +155,65 @@ function drawMetadata(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont },
   return y - 8;
 }
 
+function drawWrappedCellText(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont }, value: string, x: number, y: number, width: number, height: number, options: { align?: "left" | "right" | "center"; bold?: boolean; size?: number } = {}) {
+  const size = options.size ?? HEADER_FONT_SIZE;
+  const font = options.bold ? fonts.bold : fonts.regular;
+  const lines = wrapText(font, value, width - 6, size);
+  const blockHeight = lines.length * (size + 1.8);
+  let textY = y - (height - blockHeight) / 2 - size;
+  for (const line of lines) {
+    drawText(page, fonts.regular, line, x + 3, textY, { size, bold: options.bold ? fonts.bold : undefined, maxWidth: width - 6, align: options.align || "center" });
+    textY -= size + 1.8;
+  }
+}
+
 function drawTableHeader<T>(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont }, columns: BusinessPdfColumn<T>[], x: number, y: number) {
-  const headerLinesByColumn = columns.map((column) => wrapText(fonts.bold, column.label, column.width - 6, HEADER_FONT_SIZE));
-  const headerHeight = Math.max(18, Math.max(...headerLinesByColumn.map((lines) => lines.length)) * 9 + 7);
+  const hasGroups = columns.some((column) => column.group);
+  if (!hasGroups) {
+    const headerLinesByColumn = columns.map((column) => wrapText(fonts.bold, column.label, column.width - 6, HEADER_FONT_SIZE));
+    const headerHeight = Math.max(18, Math.max(...headerLinesByColumn.map((lines) => lines.length)) * 9 + 7);
+    let cursorX = x;
+    columns.forEach((column, index) => {
+      drawBox(page, cursorX, y - headerHeight, column.width, headerHeight, true);
+      const lines = headerLinesByColumn[index];
+      const blockHeight = lines.length * 9;
+      let textY = y - (headerHeight - blockHeight) / 2 - 7;
+      for (const line of lines) {
+        drawText(page, fonts.regular, line, cursorX + 3, textY, { size: HEADER_FONT_SIZE, bold: fonts.bold, maxWidth: column.width - 6, align: column.align || "center" });
+        textY -= 9;
+      }
+      cursorX += column.width;
+    });
+    return y - headerHeight;
+  }
+
+  const headerHeight = 30;
+  const groupHeight = 14;
+  const subHeight = headerHeight - groupHeight;
   let cursorX = x;
-  columns.forEach((column, index) => {
-    drawBox(page, cursorX, y - headerHeight, column.width, headerHeight, true);
-    const lines = headerLinesByColumn[index];
-    const blockHeight = lines.length * 9;
-    let textY = y - (headerHeight - blockHeight) / 2 - 7;
-    for (const line of lines) {
-      drawText(page, fonts.regular, line, cursorX + 3, textY, { size: HEADER_FONT_SIZE, bold: fonts.bold, maxWidth: column.width - 6, align: column.align || "center" });
-      textY -= 9;
+  for (let index = 0; index < columns.length; index += 1) {
+    const column = columns[index];
+    if (!column.group) {
+      drawBox(page, cursorX, y - headerHeight, column.width, headerHeight, true);
+      drawWrappedCellText(page, fonts, column.label, cursorX, y, column.width, headerHeight, { bold: true, align: column.align || "center" });
+      cursorX += column.width;
+      continue;
     }
-    cursorX += column.width;
-  });
+    const startIndex = index;
+    const group = column.group;
+    while (index + 1 < columns.length && columns[index + 1].group === group) index += 1;
+    const grouped = columns.slice(startIndex, index + 1);
+    const groupWidth = grouped.reduce((sum, item) => sum + item.width, 0);
+    drawBox(page, cursorX, y - groupHeight, groupWidth, groupHeight, true);
+    drawWrappedCellText(page, fonts, group || "", cursorX, y, groupWidth, groupHeight, { bold: true, align: "center" });
+    let subX = cursorX;
+    for (const subColumn of grouped) {
+      drawBox(page, subX, y - headerHeight, subColumn.width, subHeight, true);
+      drawWrappedCellText(page, fonts, subColumn.label, subX, y - groupHeight, subColumn.width, subHeight, { bold: true, align: subColumn.align || "center" });
+      subX += subColumn.width;
+    }
+    cursorX += groupWidth;
+  }
   return y - headerHeight;
 }
 
