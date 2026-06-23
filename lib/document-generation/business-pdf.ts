@@ -11,6 +11,7 @@ export type BusinessPdfColumn<T> = {
 export type BusinessPdfSection = {
   title: string;
   lines: string[];
+  startOnNewPage?: boolean;
 };
 
 export type BusinessPdfOptions<T> = {
@@ -21,30 +22,62 @@ export type BusinessPdfOptions<T> = {
   rows: T[];
   summarySections?: BusinessPdfSection[];
   footerNotes?: string[];
+  reserveSignatureSpace?: boolean;
 };
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN_X = 30;
-const TOP_Y = 760;
-const BOTTOM_Y = 82;
+const TABLE_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const LINE_HEIGHT = 10;
 const BODY_FONT_SIZE = 7.2;
 const HEADER_FONT_SIZE = 7.5;
-const TITLE_FONT_SIZE = 16;
+const TITLE_FONT_SIZE = 15;
 
-function text(value: unknown) {
-  return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+function readNumberEnv(name: string, fallback: number) {
+  const raw = process.env[name];
+  if (raw == null || raw.trim() === "") return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function layoutConfig(reserveSignatureSpace = false) {
+  const signatureY = readNumberEnv("FOS_SIGNATURE_Y", 54);
+  const signatureMaxHeight = readNumberEnv("FOS_SIGNATURE_MAX_HEIGHT", 55);
+  const signaturePadding = readNumberEnv("FOS_SIGNATURE_SAFE_PADDING", 18);
+  const signatureBottom = signatureY + signatureMaxHeight + signaturePadding;
+  return {
+    titleY: readNumberEnv("FOS_PDF_TITLE_Y", 800),
+    subtitleY: readNumberEnv("FOS_PDF_SUBTITLE_Y", 783),
+    separatorY: readNumberEnv("FOS_PDF_SEPARATOR_Y", 775),
+    topY: readNumberEnv("FOS_PDF_CONTENT_TOP_Y", 760),
+    bottomY: reserveSignatureSpace ? Math.max(readNumberEnv("FOS_PDF_BOTTOM_Y", 125), signatureBottom) : readNumberEnv("FOS_PDF_BOTTOM_Y", 82),
+  };
+}
+
+function normalizeText(value: unknown) {
+  return String(value ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function measure(font: PDFFont, value: string, size: number) {
   return font.widthOfTextAtSize(value, size);
 }
 
-function wrapText(font: PDFFont, value: unknown, maxWidth: number, size = BODY_FONT_SIZE) {
-  const input = text(value);
-  if (!input) return [""];
-  const words = input.split(" ");
+function wrapParagraph(font: PDFFont, input: string, maxWidth: number, size = BODY_FONT_SIZE) {
+  const text = input.trim();
+  if (!text) return [""];
+  const words = text.split(" ");
   const lines: string[] = [];
   let current = "";
   for (const word of words) {
@@ -74,6 +107,14 @@ function wrapText(font: PDFFont, value: unknown, maxWidth: number, size = BODY_F
   return lines.length ? lines : [""];
 }
 
+function wrapText(font: PDFFont, value: unknown, maxWidth: number, size = BODY_FONT_SIZE) {
+  const normalized = normalizeText(value);
+  if (!normalized) return [""];
+  const output: string[] = [];
+  for (const paragraph of normalized.split(/\n/)) output.push(...wrapParagraph(font, paragraph, maxWidth, size));
+  return output.length ? output : [""];
+}
+
 function drawText(page: PDFPage, font: PDFFont, value: string, x: number, y: number, options: { size?: number; bold?: PDFFont; maxWidth?: number; align?: "left" | "right" | "center" } = {}) {
   const size = options.size ?? BODY_FONT_SIZE;
   const activeFont = options.bold || font;
@@ -87,22 +128,14 @@ function drawText(page: PDFPage, font: PDFFont, value: string, x: number, y: num
 }
 
 function drawBox(page: PDFPage, x: number, y: number, width: number, height: number, fill = false) {
-  page.drawRectangle({
-    x,
-    y,
-    width,
-    height,
-    borderWidth: 0.4,
-    borderColor: rgb(0.68, 0.72, 0.78),
-    color: fill ? rgb(0.93, 0.95, 0.97) : undefined,
-  });
+  page.drawRectangle({ x, y, width, height, borderWidth: 0.4, borderColor: rgb(0.68, 0.72, 0.78), color: fill ? rgb(0.93, 0.95, 0.97) : undefined });
 }
 
-function addPage(pdf: PDFDocument, fonts: { regular: PDFFont; bold: PDFFont }, title: string, subtitle?: string) {
+function addPage(pdf: PDFDocument, fonts: { regular: PDFFont; bold: PDFFont }, title: string, subtitle: string | undefined, config: ReturnType<typeof layoutConfig>) {
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  drawText(page, fonts.regular, title, MARGIN_X, 800, { size: TITLE_FONT_SIZE, bold: fonts.bold });
-  if (subtitle) drawText(page, fonts.regular, subtitle, MARGIN_X, 783, { size: 9 });
-  page.drawLine({ start: { x: MARGIN_X, y: 775 }, end: { x: PAGE_WIDTH - MARGIN_X, y: 775 }, thickness: 0.6, color: rgb(0.63, 0.68, 0.74) });
+  drawText(page, fonts.regular, title, MARGIN_X, config.titleY, { size: TITLE_FONT_SIZE, bold: fonts.bold });
+  if (subtitle) drawText(page, fonts.regular, subtitle, MARGIN_X, config.subtitleY, { size: 9 });
+  page.drawLine({ start: { x: MARGIN_X, y: config.separatorY }, end: { x: PAGE_WIDTH - MARGIN_X, y: config.separatorY }, thickness: 0.6, color: rgb(0.63, 0.68, 0.74) });
   return page;
 }
 
@@ -166,45 +199,57 @@ function drawSection(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont }, 
   return y - 8;
 }
 
+export function fitColumns<T>(columns: BusinessPdfColumn<T>[]) {
+  const total = columns.reduce((sum, column) => sum + column.width, 0);
+  if (!total || Math.abs(total - TABLE_WIDTH) < 0.5) return columns;
+  const scale = TABLE_WIDTH / total;
+  const scaled = columns.map((column) => ({ ...column, width: Math.floor(column.width * scale) }));
+  const diff = TABLE_WIDTH - scaled.reduce((sum, column) => sum + column.width, 0);
+  if (scaled.length) scaled[scaled.length - 1].width += diff;
+  return scaled;
+}
+
 export async function buildBusinessPdfBuffer<T>(options: BusinessPdfOptions<T>) {
+  const config = layoutConfig(options.reserveSignatureSpace);
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const fonts = { regular, bold };
   const pages: PDFPage[] = [];
+  const columns = fitColumns(options.columns);
 
-  let page = addPage(pdf, fonts, options.title, options.subtitle);
+  let page = addPage(pdf, fonts, options.title, options.subtitle, config);
   pages.push(page);
-  let y = drawMetadata(page, fonts, options.metadataRows, TOP_Y);
-  y = drawTableHeader(page, fonts, options.columns, MARGIN_X, y);
+  let y = drawMetadata(page, fonts, options.metadataRows, config.topY);
+  y = drawTableHeader(page, fonts, columns, MARGIN_X, y);
 
   for (const row of options.rows) {
-    const height = rowHeight(fonts, row, options.columns);
-    if (y - height < BOTTOM_Y) {
-      page = addPage(pdf, fonts, options.title, options.subtitle);
+    const height = rowHeight(fonts, row, columns);
+    if (y - height < config.bottomY) {
+      page = addPage(pdf, fonts, options.title, options.subtitle, config);
       pages.push(page);
-      y = drawTableHeader(page, fonts, options.columns, MARGIN_X, TOP_Y);
+      y = drawTableHeader(page, fonts, columns, MARGIN_X, config.topY);
     }
-    y = drawRow(page, fonts, row, options.columns, MARGIN_X, y, height);
+    y = drawRow(page, fonts, row, columns, MARGIN_X, y, height);
   }
 
   const sections = options.summarySections || [];
   for (const section of sections) {
-    const estimated = 28 + section.lines.length * 13;
-    if (y - estimated < BOTTOM_Y) {
-      page = addPage(pdf, fonts, options.title, options.subtitle);
+    const estimated = 28 + section.lines.reduce((count, line) => count + Math.max(1, String(line).split(/\r?\n/).length), 0) * 13;
+    if (section.startOnNewPage || y - estimated < config.bottomY) {
+      page = addPage(pdf, fonts, options.title, options.subtitle, config);
       pages.push(page);
-      y = TOP_Y;
+      y = config.topY;
     }
     y = drawSection(page, fonts, section, y - 18);
   }
 
   const notes = options.footerNotes || [];
   if (notes.length) {
-    if (y - notes.length * 12 < BOTTOM_Y) {
-      page = addPage(pdf, fonts, options.title, options.subtitle);
+    if (y - notes.length * 12 < config.bottomY) {
+      page = addPage(pdf, fonts, options.title, options.subtitle, config);
       pages.push(page);
-      y = TOP_Y;
+      y = config.topY;
     }
     y = drawSection(page, fonts, { title: "Notes", lines: notes }, y - 18);
   }
