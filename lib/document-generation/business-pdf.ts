@@ -31,7 +31,7 @@ const MARGIN_X = 30;
 const TABLE_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const LINE_HEIGHT = 10;
 const BODY_FONT_SIZE = 7.2;
-const HEADER_FONT_SIZE = 7.5;
+const HEADER_FONT_SIZE = 7.2;
 const TITLE_FONT_SIZE = 15;
 
 function readNumberEnv(name: string, fallback: number) {
@@ -155,13 +155,21 @@ function drawMetadata(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont },
 }
 
 function drawTableHeader<T>(page: PDFPage, fonts: { regular: PDFFont; bold: PDFFont }, columns: BusinessPdfColumn<T>[], x: number, y: number) {
+  const headerLinesByColumn = columns.map((column) => wrapText(fonts.bold, column.label, column.width - 6, HEADER_FONT_SIZE));
+  const headerHeight = Math.max(18, Math.max(...headerLinesByColumn.map((lines) => lines.length)) * 9 + 7);
   let cursorX = x;
-  for (const column of columns) {
-    drawBox(page, cursorX, y - 16, column.width, 16, true);
-    drawText(page, fonts.regular, column.label, cursorX + 3, y - 11, { size: HEADER_FONT_SIZE, bold: fonts.bold, maxWidth: column.width - 6, align: column.align || "left" });
+  columns.forEach((column, index) => {
+    drawBox(page, cursorX, y - headerHeight, column.width, headerHeight, true);
+    const lines = headerLinesByColumn[index];
+    const blockHeight = lines.length * 9;
+    let textY = y - (headerHeight - blockHeight) / 2 - 7;
+    for (const line of lines) {
+      drawText(page, fonts.regular, line, cursorX + 3, textY, { size: HEADER_FONT_SIZE, bold: fonts.bold, maxWidth: column.width - 6, align: column.align || "center" });
+      textY -= 9;
+    }
     cursorX += column.width;
-  }
-  return y - 16;
+  });
+  return y - headerHeight;
 }
 
 function rowHeight<T>(fonts: { regular: PDFFont }, row: T, columns: BusinessPdfColumn<T>[]) {
