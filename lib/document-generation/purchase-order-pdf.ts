@@ -5,17 +5,24 @@ import { money } from "@/lib/document-generation/basic-pdf";
 type PurchaseOrderDocumentModel = ReturnType<typeof buildPurchaseOrderDocumentModel>;
 type PurchaseOrderItem = PurchaseOrderDocumentModel["items"][number];
 
+function formatBusinessDate(value: string | Date) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(date).replace(/ /g, "-");
+}
+
 export async function generatePurchaseOrderPdfBuffer(model: PurchaseOrderDocumentModel) {
   return buildBusinessPdfBuffer<PurchaseOrderItem>({
     title: "PURCHASE ORDER",
     subtitle: model.referenceNumber,
+    reserveSignatureSpace: process.env.FOS_PO_INCLUDE_SIGNATURE === "true",
     metadataRows: [
       ["PO Reference", model.referenceNumber],
       ["Original Offer", model.originalOfferReference || "-"],
       ["Client", model.client.name || "-"],
       ["Address", model.client.address || "-"],
       ["Prepared By", model.preparedBy || "-"],
-      ["Generated", new Date(model.generatedAt).toLocaleString()],
+      ["Date", formatBusinessDate(model.generatedAt)],
     ],
     columns: [
       { key: "serial", label: "SL", width: 25, align: "center", render: (item) => String(item.serial) },
