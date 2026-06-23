@@ -12,24 +12,22 @@ function formatBusinessDate(value: string | Date) {
 }
 
 export async function generateChallanPdfBuffer(model: ChallanDocumentModel) {
+  const challanNo = model.referenceNumber.startsWith("DC_") ? model.referenceNumber.split("_")[1] || model.referenceNumber : model.referenceNumber;
   return buildBusinessPdfBuffer<ChallanItem>({
-    title: "CHALLAN",
+    title: "DELIVERY CHALLAN",
     subtitle: model.referenceNumber,
     reserveSignatureSpace: model.includeSignature,
     metadataRows: [
-      ["Reference", model.referenceNumber],
+      ["Challan No", challanNo],
       ["Date", formatBusinessDate(model.challanDate)],
       ["Client", model.client.name || "-"],
       ["Address", model.client.address || "-"],
-      ["Carrier", model.challanCarrier || "-"],
-      ["Prepared By", model.preparedBy || "-"],
     ],
     columns: [
-      { key: "serial", label: "SL", width: 30, align: "center", render: (item) => String(item.serial) },
-      { key: "itemCode", label: "Item Code", width: 82, render: (item) => item.itemCode || item.productType || "-" },
-      { key: "description", label: "Description", width: 315, render: (item) => item.description || "-" },
-      { key: "qty", label: "Qty", width: 50, align: "right", render: (item) => money(Number(item.qty || 0)).replace(".00", "") },
-      { key: "unit", label: "Unit", width: 58, render: (item) => item.unit || "-" },
+      { key: "serial", label: "SL", width: 42, align: "center", render: (item) => String(item.serial) },
+      { key: "description", label: "Item Description", width: 352, render: (item) => item.description || "-" },
+      { key: "qty", label: "Quantity", width: 70, align: "center", render: (item) => money(Number(item.qty || 0)).replace(".00", "") },
+      { key: "unit", label: "Unit", width: 70, align: "center", render: (item) => item.unit || "-" },
     ],
     rows: model.items,
     summarySections: [
