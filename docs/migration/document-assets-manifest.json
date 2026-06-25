@@ -1,0 +1,52 @@
+{
+  "sourceRoot": "D:\\OneDrive - Green Energy\\Sakib\\GE\\Financial-Offer-Challan-Purchase-Order-System Stable",
+  "storageRoot": "D:\\OneDrive - Green Energy\\Sakib\\GE\\GE-FOS-NEXT\\storage",
+  "copied": [
+    {
+      "source": "assets/letterhead.pdf",
+      "storageKey": "assets/letterhead.pdf"
+    },
+    {
+      "source": "assets/amoge_logo.png",
+      "storageKey": "assets/amoge_logo.png"
+    },
+    {
+      "source": "assets/NAFFCO_Logo_New.png",
+      "storageKey": "assets/NAFFCO_Logo_New.png"
+    },
+    {
+      "source": "authorization/Signature_RIF.png",
+      "storageKey": "assets/signatures/Signature_RIF.png"
+    },
+    {
+      "source": "authorization/Signature_SHF.jpg",
+      "storageKey": "assets/signatures/Signature_SHF.jpg"
+    }
+  ],
+  "missing": [],
+  "signatureCandidates": [
+    {
+      "storageKey": "assets/signatures/Signature_RIF.png",
+      "filename": "Signature_RIF.png"
+    },
+    {
+      "storageKey": "assets/signatures/Signature_SHF.jpg",
+      "filename": "Signature_SHF.jpg"
+    }
+  ],
+  "recommendedEnv": {
+    "FOS_LETTERHEAD_STORAGE_KEY": "assets/letterhead.pdf",
+    "FOS_PDF_ASSET_MODE": "letterhead-only",
+    "FOS_LOGO_STORAGE_KEY": "",
+    "FOS_OFFER_LOGO_STORAGE_KEY": "assets/amoge_logo.png",
+    "FOS_CHALLAN_LOGO_STORAGE_KEY": "assets/amoge_logo.png",
+    "FOS_PURCHASE_ORDER_LOGO_STORAGE_KEY": "assets/NAFFCO_Logo_New.png",
+    "FOS_SIGNATURE_STORAGE_KEY": "assets/signatures/Signature_RIF.png"
+  },
+  "notes": [
+    "Default FOS_PDF_ASSET_MODE is letterhead-only to avoid duplicate logos when the letterhead already contains branding.",
+    "Set FOS_PDF_ASSET_MODE=both only after visually confirming the letterhead does not already include the same logo.",
+    "Set FOS_PO_INCLUDE_SIGNATURE=true only if purchase orders require signature stamping.",
+    "Use signatureCandidates to populate users.signatureStorageKey when signatures differ by prepared-by/user."
+  ]
+}
