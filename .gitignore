@@ -58,3 +58,15 @@ test
 *.rar
 *.pdf
 *.csv
+
+# SQLite database files (contains all user hashes and data)
+*.db
+*.sqlite
+*.sqlite3
+*-journal
+
+# User uploads, legacy assets, and signatures
+/storage/
+
+# Migration data dumps (contains JSON extracts of all legacy projects and users)
+/docs/migration/*.json
