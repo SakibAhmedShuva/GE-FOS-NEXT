@@ -38,7 +38,7 @@ export default function LoginPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Financial Offer System</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-950">Sign in</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Uses DB-backed users and an HTTP-only signed session cookie. Legacy plaintext passwords are not trusted as a long-term storage pattern.
+          Enter your credentials to access your account.
         </p>
 
         <label className="mt-6 block text-sm font-semibold text-slate-700" htmlFor="email">Email</label>
