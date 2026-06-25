@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -128,9 +128,9 @@ model CatalogItem {
   model               String?
   descriptionHtml     String
   descriptionPlain    String
-  poPrice             Decimal?    @db.Decimal(18, 4)
-  offerPrice          Decimal?    @db.Decimal(18, 4)
-  installationPrice   Decimal?    @db.Decimal(18, 4)
+  poPrice             Decimal?    
+  offerPrice          Decimal?    
+  installationPrice   Decimal?    
   unit                String?
   metadata            Json?
   searchText          String      @default("")
@@ -223,17 +223,17 @@ model ProjectItem {
   approvals           String?
   descriptionHtml     String?
   descriptionPlain    String?
-  qty                 Decimal?     @db.Decimal(18, 4)
+  qty                 Decimal?     
   unit                String?
-  foreignPriceUsd     Decimal?     @db.Decimal(18, 4)
-  foreignTotalUsd     Decimal?     @db.Decimal(18, 4)
-  localSupplyPriceBdt Decimal?     @db.Decimal(18, 4)
-  localSupplyTotalBdt Decimal?     @db.Decimal(18, 4)
-  installationPriceBdt Decimal?    @db.Decimal(18, 4)
-  installationTotalBdt Decimal?    @db.Decimal(18, 4)
-  poPriceUsd          Decimal?     @db.Decimal(18, 4)
-  poTotalUsd          Decimal?     @db.Decimal(18, 4)
-  poPriceBdt          Decimal?     @db.Decimal(18, 4)
+  foreignPriceUsd     Decimal?     
+  foreignTotalUsd     Decimal?     
+  localSupplyPriceBdt Decimal?     
+  localSupplyTotalBdt Decimal?     
+  installationPriceBdt Decimal?    
+  installationTotalBdt Decimal?    
+  poPriceUsd          Decimal?     
+  poTotalUsd          Decimal?     
+  poPriceBdt          Decimal?     
   isCustom            Boolean      @default(false)
   metadata            Json?
   createdAt           DateTime     @default(now())
